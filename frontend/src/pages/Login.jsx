@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
-import { getIdToken } from 'firebase/auth'
-import { auth } from '../config/firebase'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -19,10 +17,13 @@ function Login() {
     setLoading(true)
     
     try {
-      await login(email, password)
+      console.log('Attempting to login with:', { email })
+      const user = await login(email, password)
+      console.log('Login successful:', user)
       navigate('/dashboard')
     } catch (error) {
-      setError('Failed to log in. Please check your credentials.')
+      console.error('Login error:', error)
+      setError(error.message || 'Failed to log in. Please check your credentials.')
     } finally {
       setLoading(false)
     }

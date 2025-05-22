@@ -1,0 +1,110 @@
+@baseUrl = http://localhost:5000/api
+@authToken = {{login.response.body.token}}
+
+### Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "firebaseUid": "{{firebaseUid}}"
+}
+
+### Login user
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "email": "john@example.com"
+}
+
+### Get current user profile
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+
+### Register a doctor
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "name": "Dr. Jane Smith",
+    "email": "jane@example.com",
+    "firebaseUid": "{{firebaseUid}}",
+    "role": "doctor"
+}
+
+### Login doctor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "email": "jane@example.com"
+}
+
+### Register user with additional details
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "firebaseUid": "{{firebaseUid}}",
+    "dateOfBirth": "1990-01-01",
+    "gender": "female",
+    "bloodGroup": "O+",
+    "phone": "+1234567890",
+    "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "state": "NY",
+        "zipCode": "10001",
+        "country": "USA"
+    },
+    "emergencyContact": {
+        "name": "Bob Johnson",
+        "relationship": "Spouse",
+        "phone": "+1987654321"
+    }
+}
+
+### Update user profile
+PATCH {{baseUrl}}/auth/profile
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+    "name": "John Updated",
+    "dateOfBirth": "1985-05-15",
+    "gender": "male",
+    "bloodGroup": "A+",
+    "phone": "+1122334455",
+    "address": {
+        "street": "456 Oak St",
+        "city": "Los Angeles",
+        "state": "CA",
+        "zipCode": "90001",
+        "country": "USA"
+    },
+    "emergencyContact": {
+        "name": "Sarah Johnson",
+        "relationship": "Sister",
+        "phone": "+1555666777"
+    }
+}
+
+### Google authentication
+POST {{baseUrl}}/auth/google
+Content-Type: application/json
+Authorization: Bearer {{firebaseToken}}
+
+{
+    "googleId": "{{googleId}}",
+    "email": "user@gmail.com",
+    "name": "Google User"
+} 

@@ -44,7 +44,8 @@ const UserSchema = new mongoose.Schema({
     enum: ['male', 'female', 'other']
   },
   bloodGroup: {
-    type: String
+    type: String,
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
   },
   phone: {
     type: String
@@ -53,7 +54,8 @@ const UserSchema = new mongoose.Schema({
     street: String,
     city: String,
     state: String,
-    zipCode: String
+    zipCode: String,
+    country: String
   },
   emergencyContact: {
     name: String,
@@ -63,8 +65,8 @@ const UserSchema = new mongoose.Schema({
   medicalHistory: [{
     condition: String,
     diagnosis: String,
-    date: Date,
-    notes: String
+    treatment: String,
+    date: Date
   }],
   allergies: [{
     name: String,
