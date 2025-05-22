@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 import ProfilePicture from '../components/profile/ProfilePicture'
 import { updateProfile as updateFirebaseProfile } from 'firebase/auth'
