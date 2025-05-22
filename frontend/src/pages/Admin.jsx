@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { seedDoctors } from '../utils/seedDoctors'
 import Button from '../components/common/Button'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 
 // Admin user email - replace with your admin email
 const ADMIN_EMAIL = "admin@example.com" // Replace with your admin email
