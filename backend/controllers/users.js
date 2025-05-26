@@ -1,4 +1,4 @@
-const admin = require('../config/firebaseAdmin');
+const admin = require('../config/firebase-admin');
 const User = require('../models/User');
 
 exports.syncUser = async (req, res) => {
