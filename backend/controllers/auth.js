@@ -53,12 +53,21 @@ exports.login = asyncHandler(async (req, res, next) => {
 // @route   GET /api/auth/me
 // @access  Private
 exports.getMe = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return next(new ErrorResponse('User not found', 404));
+    }
 
-  res.status(200).json({
-    success: true,
-    data: user
-  });
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    console.error('Error in getMe:', err);
+    return next(new ErrorResponse('Error fetching user data', 500));
+  }
 });
 
 // @desc    Google auth

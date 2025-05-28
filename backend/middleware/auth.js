@@ -4,6 +4,19 @@ const ErrorResponse = require('../utils/errorResponse');
 const User = require('../models/User');
 const admin = require('../config/firebase-admin');
 
+// Handle CORS preflight
+exports.handleCors = (req, res, next) => {
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(204).end();
+  }
+  next();
+};
+
 // Protect routes
 exports.protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -28,14 +41,18 @@ exports.protect = asyncHandler(async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = await User.findById(decoded.id);
+    // Get user from the token
+    const user = await User.findById(decoded.id).select('-password');
 
-    if (!req.user) {
+    if (!user) {
       return next(new ErrorResponse('User not found', 404));
     }
 
+    // Add user to request object
+    req.user = user;
     next();
   } catch (err) {
+    console.error('Token verification error:', err);
     return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 });
@@ -75,6 +92,7 @@ exports.verifyFirebaseToken = asyncHandler(async (req, res, next) => {
     req.firebaseUser = decodedToken;
     next();
   } catch (err) {
+    console.error('Firebase token verification error:', err);
     return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 }); 

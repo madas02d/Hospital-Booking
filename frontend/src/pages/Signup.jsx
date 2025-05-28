@@ -21,7 +21,16 @@ function Signup() {
       await signup(email, password, name)
       navigate('/dashboard')
     } catch (error) {
-      setError('Failed to create an account. Please try again.')
+      console.error('Signup error:', error)
+      if (error.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please login instead.')
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters long.')
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.')
+      } else {
+        setError('Failed to create an account. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -30,7 +39,16 @@ function Signup() {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6">Sign Up</h2>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600">{error}</p>
+          {error.includes('already registered') && (
+            <Link to="/login" className="text-blue-600 hover:text-blue-700 text-sm mt-2 inline-block">
+              Go to Login
+            </Link>
+          )}
+        </div>
+      )}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label className="block text-gray-700 mb-2">Name</label>
