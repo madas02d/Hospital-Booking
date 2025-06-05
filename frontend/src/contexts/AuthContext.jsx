@@ -11,6 +11,30 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
+// Configure axios defaults
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Add response interceptor for error handling
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('Axios Error:', error);
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Error Response:', error.response.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Error Request:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error Message:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
 export function useAuth() {
   return useContext(AuthContext);
 }
@@ -20,23 +44,28 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
 
+  const fetchUserData = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await axios.get('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        try {
-          // Get the Firebase ID token
-          const token = await firebaseUser.getIdToken();
-          
-          // Get user data from MongoDB
-          const response = await axios.get('http://localhost:5000/api/auth/me', {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          setCurrentUser({ ...firebaseUser, ...response.data.data });
-        } catch (error) {
-          console.error('Error fetching user data:', error);
+        const userData = await fetchUserData(firebaseUser);
+        if (userData) {
+          setCurrentUser({ ...firebaseUser, ...userData });
+        } else {
           setCurrentUser(firebaseUser);
         }
       } else {
@@ -50,17 +79,14 @@ export function AuthProvider({ children }) {
 
   const signup = async (email, password, name) => {
     try {
-      // Create user in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await firebaseUpdateProfile(userCredential.user, {
         displayName: name
       });
 
-      // Get the Firebase ID token
       const token = await userCredential.user.getIdToken();
 
-      // Create user in MongoDB
-      await axios.post('http://localhost:5000/api/auth/register', {
+      await axios.post('/api/auth/register', {
         name,
         email,
         firebaseUid: userCredential.user.uid
@@ -69,6 +95,9 @@ export function AuthProvider({ children }) {
           Authorization: `Bearer ${token}`
         }
       });
+
+      const userData = await fetchUserData(userCredential.user);
+      setCurrentUser({ ...userCredential.user, ...userData });
 
       return userCredential.user;
     } catch (error) {
@@ -79,18 +108,15 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      // Sign in with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const token = await userCredential.user.getIdToken();
-
-      // Get user data from MongoDB
-      const response = await axios.get('http://localhost:5000/api/auth/me', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      setCurrentUser({ ...userCredential.user, ...response.data.data });
+      const userData = await fetchUserData(userCredential.user);
+      
+      if (userData) {
+        setCurrentUser({ ...userCredential.user, ...userData });
+      } else {
+        setCurrentUser(userCredential.user);
+      }
+      
       return userCredential.user;
     } catch (error) {
       console.error('Login error:', error);

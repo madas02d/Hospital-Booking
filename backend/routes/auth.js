@@ -8,7 +8,10 @@ const {
   googleAuth,
   updateProfile
 } = require('../controllers/auth');
-const { protect, verifyFirebaseToken } = require('../middleware/auth');
+const { protect, verifyFirebaseToken, handleCors } = require('../middleware/auth');
+
+// Apply CORS handler to all routes
+router.use(handleCors);
 
 // Local auth routes
 router.post('/register', verifyFirebaseToken, register);

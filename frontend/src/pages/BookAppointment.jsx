@@ -19,14 +19,34 @@ const BookAppointment = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
     } else if (!doctor) {
       navigate('/find-clinics');
+    } else {
+      setIsLoading(false);
     }
   }, [currentUser, doctor, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doctor) {
+    return null; // This will be handled by the useEffect redirect
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,32 +62,42 @@ const BookAppointment = () => {
     setError(null);
 
     try {
+      const appointmentData = {
+        doctorId: doctor._id,
+        doctorName: doctor.name,
+        specialty: doctor.specialty,
+        consultationFee: doctor.consultationFee,
+        date: formData.date,
+        time: formData.time,
+        reason: formData.reason,
+        notes: formData.notes
+      };
+
       const response = await axios.post(
         'http://localhost:5000/api/appointments',
-        {
-          doctorId: doctor._id,
-          doctorName: doctor.name,
-          specialty: doctor.specialty,
-          consultationFee: doctor.consultationFee,
-          date: formData.date,
-          time: formData.time,
-          reason: formData.reason,
-          notes: formData.notes
-        },
+        appointmentData,
         {
           headers: {
-            Authorization: `Bearer ${currentUser.token}`
+            Authorization: `Bearer ${currentUser.token}`,
+            'Content-Type': 'application/json'
           },
           withCredentials: true
         }
       );
 
       if (response.data) {
-        navigate('/appointments');
+        navigate('/appointments', { 
+          state: { 
+            message: 'Appointment booked successfully!' 
+          }
+        });
       }
     } catch (err) {
       console.error('Error booking appointment:', err);
-      setError(err.response?.data?.message || 'Failed to book appointment. Please try again.');
+      setError(
+        err.response?.data?.message || 
+        'Failed to book appointment. Please try again.'
+      );
     } finally {
       setLoading(false);
     }

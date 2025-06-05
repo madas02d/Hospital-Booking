@@ -27,7 +27,8 @@ const Dashboard = () => {
         setError(null);
         const response = await axios.get('http://localhost:5000/api/appointments', {
           headers: {
-            Authorization: `Bearer ${currentUser.token}`
+            Authorization: `Bearer ${currentUser.token}`,
+            'Content-Type': 'application/json'
           },
           withCredentials: true
         });
@@ -40,20 +41,22 @@ const Dashboard = () => {
           new Date(apt.date) > new Date() && apt.status === 'scheduled'
         ).length;
         const totalSpent = appointments.reduce((sum, apt) => 
-          apt.status === 'completed' ? sum + apt.consultationFee : sum, 0
+          apt.status === 'completed' ? sum + (apt.consultationFee || 0) : sum, 0
         );
 
         setStats({
           totalAppointments,
           upcomingAppointments,
-          totalSpent
+          totalSpent: totalSpent.toFixed(2)
         });
 
-        const nextAppt = appointments.find(apt => 
-          new Date(apt.date) > new Date() && apt.status === 'scheduled'
-        );
+        // Find next appointment
+        const nextAppt = appointments
+          .filter(apt => new Date(apt.date) > new Date() && apt.status === 'scheduled')
+          .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
         setNextAppointment(nextAppt);
 
+        // Process recent activity
         const activities = appointments.map(apt => ({
           id: apt._id,
           type: apt.status === 'cancelled' ? 'cancellation' : 
@@ -65,13 +68,18 @@ const Dashboard = () => {
           date: apt.createdAt || apt.date,
           doctorName: apt.doctorName,
           appointmentDate: apt.date,
-          appointmentTime: apt.time
+          appointmentTime: apt.time,
+          status: apt.status
         }));
+        
         activities.sort((a, b) => new Date(b.date) - new Date(a.date));
         setRecentActivity(activities.slice(0, 5));
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
+        setError(
+          err.response?.data?.message || 
+          'Failed to load dashboard data. Please try again.'
+        );
       } finally {
         setLoading(false);
       }
@@ -113,9 +121,29 @@ const Dashboard = () => {
     );
   }
 
-  const handleCancelAppointment = async () => {
-    // Refresh dashboard data after cancellation
-    await fetchDashboardData();
+  const handleCancelAppointment = async (appointmentId) => {
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/appointments/${appointmentId}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${currentUser.token}`,
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
+      
+      // Refresh dashboard data after cancellation
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Error cancelling appointment:', err);
+      setError(
+        err.response?.data?.message || 
+        'Failed to cancel appointment. Please try again.'
+      );
+    }
   };
 
   const quickActions = [
