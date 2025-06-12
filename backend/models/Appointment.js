@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+import api from '../utils/api';
 
 const appointmentSchema = new mongoose.Schema({
   userId: {

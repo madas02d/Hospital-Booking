@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/api';
 import { format } from 'date-fns';
 import { FaCalendarAlt, FaClock, FaUserMd, FaMoneyBillWave, FaTimes } from 'react-icons/fa';
 
@@ -18,19 +18,13 @@ const Appointments = () => {
     } else {
       fetchAppointments();
     }
-    fetchAppointments();
   }, [currentUser, navigate]);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('http://localhost:5000/api/appointments', {
-        headers: {
-          Authorization: `Bearer ${currentUser.token}`
-        },
-        withCredentials: true
-      });
+      const response = await api.get('/api/appointments');
       setAppointments(response.data);
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -42,16 +36,7 @@ const Appointments = () => {
 
   const handleCancelAppointment = async (appointmentId) => {
     try {
-      await axios.patch(
-        `http://localhost:5000/api/appointments/${appointmentId}/cancel`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`
-          },
-          withCredentials: true
-        }
-      );
+      await api.patch(`/api/appointments/${appointmentId}/cancel`);
       fetchAppointments(); // Refresh the appointments list
     } catch (err) {
       console.error('Error cancelling appointment:', err);

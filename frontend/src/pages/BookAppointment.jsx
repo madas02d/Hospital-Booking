@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/api';
 import { format } from 'date-fns';
 import { FaCalendarAlt, FaClock, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
 
@@ -73,17 +73,7 @@ const BookAppointment = () => {
         notes: formData.notes
       };
 
-      const response = await axios.post(
-        'http://localhost:5000/api/appointments',
-        appointmentData,
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
-        }
-      );
+      const response = await api.post('/api/appointments', appointmentData);
 
       if (response.data) {
         navigate('/appointments', { 
