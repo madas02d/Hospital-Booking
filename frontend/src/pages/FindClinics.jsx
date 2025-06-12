@@ -12,14 +12,6 @@ const GOOGLE_MAPS_LIBRARIES = ['places'];
 // Debug: Check if environment variables are loaded
 console.log('Google Maps API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing');
 
-const BERLIN_LOCATIONS = [
-  { name: 'Berlin Mitte', lat: 52.5200, lng: 13.4050 },
-  { name: 'Kreuzberg', lat: 52.4977, lng: 13.3903 },
-  { name: 'Charlottenburg', lat: 52.5167, lng: 13.3000 },
-  { name: 'Prenzlauer Berg', lat: 52.5397, lng: 13.4200 },
-  { name: 'Friedrichshain', lat: 52.5200, lng: 13.4540 }
-];
-
 const SPECIALTIES = [
   { value: '', label: 'All Medical Facilities' },
   { value: 'general practitioner', label: 'General Practice' },
@@ -35,14 +27,15 @@ const SPECIALTIES = [
 export default function FindClinics() {
   const { currentUser } = useAuth();
   const [mapRef, setMapRef] = useState(null);
-  const [center, setCenter] = useState({ lat: 52.5200, lng: 13.4050 }); // Set default center
+  const [center, setCenter] = useState({ lat: 52.5200, lng: 13.4050 }); // Default center
   const [clinics, setClinics] = useState([]);
   const [selectedClinic, setSelectedClinic] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const [searchRadius, setSearchRadius] = useState(5000);
-  const [selectedLocation, setSelectedLocation] = useState(BERLIN_LOCATIONS[0]); // Set default location
+  const [nearbyLocations, setNearbyLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [clinicDetails, setClinicDetails] = useState({});
   const navigate = useNavigate();
 
@@ -50,6 +43,80 @@ export default function FindClinics() {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
+
+  // Generate nearby locations based on user's position
+  const generateNearbyLocations = (userLat, userLng) => {
+    const locations = [];
+    const radius = 0.05; // Approximately 5km radius
+    const points = 8; // Number of points around the user
+
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 2 * Math.PI) / points;
+      const lat = userLat + radius * Math.cos(angle);
+      const lng = userLng + radius * Math.sin(angle);
+      
+      // Use reverse geocoding to get location names
+      if (mapRef) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode(
+          { location: { lat, lng } },
+          (results, status) => {
+            if (status === 'OK' && results[0]) {
+              const locationName = results[0].address_components.find(
+                component => component.types.includes('sublocality') || 
+                           component.types.includes('locality')
+              )?.long_name || `Location ${i + 1}`;
+
+              locations.push({
+                name: locationName,
+                lat,
+                lng
+              });
+
+              // Update locations state when we have all points
+              if (locations.length === points) {
+                setNearbyLocations(locations);
+                // Set the first location as selected by default
+                setSelectedLocation(locations[0]);
+              }
+            }
+          }
+        );
+      }
+    }
+  };
+
+  // Get user's location when component mounts or when user logs in
+  useEffect(() => {
+    const getUserLocation = () => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const location = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            setCenter(location);
+            generateNearbyLocations(location.lat, location.lng);
+          },
+          (error) => {
+            console.error("Error getting location:", error);
+            // Keep default center if geolocation fails
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      }
+    };
+
+    // If user is logged in, get their location
+    if (currentUser) {
+      getUserLocation();
+    }
+  }, [currentUser, mapRef]);
 
   // Debug: Log when the map is loaded
   useEffect(() => {
@@ -161,13 +228,6 @@ export default function FindClinics() {
     }
   }, [mapRef, center, searchRadius, selectedSpecialty]);
 
-  // Update center when location changes
-  useEffect(() => {
-    if (selectedLocation) {
-      setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
-    }
-  }, [selectedLocation]);
-
   // Search for clinics when map is ready
   useEffect(() => {
     if (isLoaded && center && mapRef) {
@@ -201,22 +261,25 @@ export default function FindClinics() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Find Clinics in Berlin</h1>
+        <h1 className="text-3xl font-bold mb-4">Find Clinics Near You</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Berlin District
+              Nearby Areas
             </label>
             <select
               value={selectedLocation ? selectedLocation.name : ''}
               onChange={(e) => {
-                const location = BERLIN_LOCATIONS.find(loc => loc.name === e.target.value);
+                const location = nearbyLocations.find(loc => loc.name === e.target.value);
                 setSelectedLocation(location);
+                if (location) {
+                  setCenter({ lat: location.lat, lng: location.lng });
+                }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Select District</option>
-              {BERLIN_LOCATIONS.map((location) => (
+              <option value="">Select Area</option>
+              {nearbyLocations.map((location) => (
                 <option key={location.name} value={location.name}>
                   {location.name}
                 </option>
