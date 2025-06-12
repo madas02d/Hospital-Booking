@@ -4,6 +4,7 @@ import ClinicMap from '../components/map/ClinicMap';
 import { useAuth } from '../contexts/AuthContext';
 import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 
 // Move libraries outside component to prevent recreation
 const GOOGLE_MAPS_LIBRARIES = ['places'];

@@ -18,7 +18,7 @@ function Signup() {
     setLoading(true)
 
     try {
-      await signup(email, password, name)
+      await signup(name, email, password)
       navigate('/dashboard')
     } catch (error) {
       console.error('Signup error:', error)

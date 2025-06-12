@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 import ProfilePicture from '../components/profile/ProfilePicture'
 import { updateProfile as updateFirebaseProfile } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import UserAppointments from '../components/profile/UserAppointments'
+import api from '../utils/api'
 
 function Profile() {
   const { user, updateProfile, logout } = useAuth()
@@ -24,6 +25,7 @@ function Profile() {
     e.preventDefault()
     try {
       // In a real app, you would make an API call here
+      await api.put('/api/auth/profile', formData)
       updateProfile(formData)
       setMessage({ type: 'success', text: 'Profile updated successfully' })
       setIsEditing(false)

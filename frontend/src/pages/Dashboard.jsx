@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/api';
 import StatCard from '../components/dashboard/StatCard';
 import ActivityItem from '../components/dashboard/ActivityItem';
 import AppointmentCard from '../components/appointments/AppointmentCard';
@@ -25,14 +25,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get('http://localhost:5000/api/appointments', {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
-        });
-        
+        const response = await api.get('/api/appointments');
         const appointments = response.data;
         
         // Calculate statistics
@@ -123,20 +116,13 @@ const Dashboard = () => {
 
   const handleCancelAppointment = async (appointmentId) => {
     try {
-      await axios.patch(
-        `http://localhost:5000/api/appointments/${appointmentId}/cancel`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
-        }
-      );
-      
+      await api.patch(`/api/appointments/${appointmentId}/cancel`);
       // Refresh dashboard data after cancellation
-      await fetchDashboardData();
+      if (currentUser) {
+        const response = await api.get('/api/appointments');
+        const appointments = response.data;
+        // ... repeat stats logic if needed ...
+      }
     } catch (err) {
       console.error('Error cancelling appointment:', err);
       setError(

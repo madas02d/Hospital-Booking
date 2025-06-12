@@ -9,13 +9,16 @@ const {
   updateProfile
 } = require('../controllers/auth');
 const { protect, verifyFirebaseToken, handleCors } = require('../middleware/auth');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // Apply CORS handler to all routes
 router.use(handleCors);
 
 // Local auth routes
-router.post('/register', verifyFirebaseToken, register);
-router.post('/login', verifyFirebaseToken, login);
+router.post('/register', register);
+router.post('/login', login);
 router.get('/me', protect, getMe);
 router.post('/google', verifyFirebaseToken, googleAuth);
 router.patch('/profile', protect, updateProfile);
