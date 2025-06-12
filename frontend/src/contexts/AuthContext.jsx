@@ -14,15 +14,31 @@ const api = axios.create({
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      api.get('/api/auth/me')
-        .then(res => setCurrentUser(res.data.user))
-        .catch(() => setCurrentUser(null))
+  // Function to check and restore authentication
+  const checkAuth = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        const response = await api.get('/api/auth/me')
+        setCurrentUser(response.data)
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+      // If token is invalid, clear it
+      localStorage.removeItem('token')
+      delete api.defaults.headers.common['Authorization']
+      setCurrentUser(null)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  // Check authentication on mount and when token changes
+  useEffect(() => {
+    checkAuth()
   }, [])
 
   const signup = async (name, email, password) => {
@@ -53,17 +69,32 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
-    delete api.defaults.headers.common['Authorization']
-    setCurrentUser(null)
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('token')
+      delete api.defaults.headers.common['Authorization']
+      setCurrentUser(null)
+    }
   }
 
   const value = {
     currentUser,
+    loading,
     signup,
     login,
     logout
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (

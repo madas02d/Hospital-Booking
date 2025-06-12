@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useJsApiLoader } from '@react-google-maps/api';
 import ClinicMap from '../components/map/ClinicMap';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt } from 'react-icons/fa';
+import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt, FaShieldAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -22,6 +22,17 @@ const SPECIALTIES = [
   { value: 'orthopedic', label: 'Orthopedics' },
   { value: 'ophthalmologist', label: 'Eye Care' },
   { value: 'gynecologist', label: 'Gynecology' }
+];
+
+const HEALTH_INSURANCES = [
+  { id: 'tk', name: 'Techniker Krankenkasse (TK)', accepted: true },
+  { id: 'aok', name: 'AOK', accepted: true },
+  { id: 'barmer', name: 'Barmer', accepted: true },
+  { id: 'dak', name: 'DAK-Gesundheit', accepted: true },
+  { id: 'ikk', name: 'IKK classic', accepted: true },
+  { id: 'hkk', name: 'HKK', accepted: true },
+  { id: 'heag', name: 'HEAG', accepted: true },
+  { id: 'bkk', name: 'BKK', accepted: true }
 ];
 
 export default function FindClinics() {
@@ -156,7 +167,7 @@ export default function FindClinics() {
       _id: clinic.place_id,
       name: clinic.name,
       specialty: selectedSpecialty || 'General Practice',
-      consultationFee: 100, // Default fee, you might want to adjust this
+      acceptedInsurances: HEALTH_INSURANCES.filter(insurance => insurance.accepted),
       location: clinic.vicinity,
       rating: clinic.rating,
       reviews: clinic.user_ratings_total
@@ -361,6 +372,10 @@ export default function FindClinics() {
                       {clinic.opening_hours.open_now ? 'Open Now' : 'Closed'}
                     </p>
                   )}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FaShieldAlt className="mr-2 text-blue-500" />
+                    <span>Accepts German Health Insurance</span>
+                  </div>
                   {clinicDetails[clinic.place_id]?.formatted_phone_number && (
                     <p className="text-sm text-gray-600 flex items-center">
                       <FaPhone className="mr-2 text-blue-500" />

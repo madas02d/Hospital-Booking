@@ -3,7 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import { format } from 'date-fns';
-import { FaCalendarAlt, FaClock, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaShieldAlt } from 'react-icons/fa';
+
+const HEALTH_INSURANCES = [
+  { id: 'tk', name: 'Techniker Krankenkasse (TK)' },
+  { id: 'aok', name: 'AOK' },
+  { id: 'barmer', name: 'Barmer' },
+  { id: 'dak', name: 'DAK-Gesundheit' },
+  { id: 'ikk', name: 'IKK classic' },
+  { id: 'hkk', name: 'HKK' },
+  { id: 'heag', name: 'HEAG' },
+  { id: 'bkk', name: 'BKK' }
+];
 
 const BookAppointment = () => {
   const navigate = useNavigate();
@@ -15,7 +26,8 @@ const BookAppointment = () => {
     date: '',
     time: '',
     reason: '',
-    notes: ''
+    notes: '',
+    insurance: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -66,7 +78,7 @@ const BookAppointment = () => {
         doctorId: doctor._id,
         doctorName: doctor.name,
         specialty: doctor.specialty,
-        consultationFee: doctor.consultationFee,
+        insurance: formData.insurance,
         date: formData.date,
         time: formData.time,
         reason: formData.reason,
@@ -104,8 +116,8 @@ const BookAppointment = () => {
               <p className="text-gray-600">{doctor.specialty}</p>
             </div>
             <div className="flex items-center text-gray-600">
-              <FaMoneyBillWave className="mr-2" />
-              <span>Consultation Fee: ${doctor.consultationFee}</span>
+              <FaShieldAlt className="mr-2" />
+              <span>Accepts German Health Insurance</span>
             </div>
           </div>
         </div>
@@ -118,6 +130,32 @@ const BookAppointment = () => {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="insurance" className="block text-sm font-medium text-gray-700">
+                Health Insurance
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaShieldAlt className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="insurance"
+                  name="insurance"
+                  required
+                  value={formData.insurance}
+                  onChange={handleChange}
+                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                >
+                  <option value="">Select your health insurance</option>
+                  {HEALTH_INSURANCES.map((insurance) => (
+                    <option key={insurance.id} value={insurance.id}>
+                      {insurance.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label htmlFor="date" className="block text-sm font-medium text-gray-700">
                 Date
