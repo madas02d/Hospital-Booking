@@ -17,10 +17,21 @@ app.use(cors(corsOptions));
 // Body parser
 app.use(express.json());
 
+// MongoDB connection options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+};
+
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/medical_app')
+mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log('MongoDB Connection Error:', err));
+  .catch(err => {
+    console.log('MongoDB Connection Error:', err);
+    process.exit(1); // Exit if cannot connect to database
+  });
 
 // ROUTES
 app.use('/api/auth', require('./routes/auth'));
