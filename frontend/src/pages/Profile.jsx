@@ -6,6 +6,7 @@ import { updateProfile as updateFirebaseProfile } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import UserAppointments from '../components/profile/UserAppointments'
 import api from '../utils/api'
+import { Link } from 'react-router-dom'
 
 function Profile() {
   const { user, updateProfile, logout } = useAuth()

@@ -147,14 +147,25 @@ export default function FindClinics() {
       service.getDetails(
         {
           placeId: clinic.place_id,
-          fields: ['formatted_phone_number', 'website', 'opening_hours', 'reviews']
+          fields: [
+            'formatted_phone_number',
+            'website',
+            'opening_hours',
+            'reviews',
+            'formatted_address',
+            'url',
+            'international_phone_number'
+          ]
         },
         (place, status) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+            console.log('Clinic details:', place); // Debug log
             setClinicDetails(prev => ({
               ...prev,
               [clinic.place_id]: place
             }));
+          } else {
+            console.error('Error fetching clinic details:', status);
           }
         }
       );
