@@ -8,9 +8,14 @@ import Dashboard from './pages/Dashboard';
 import BookAppointment from './pages/BookAppointment';
 import Appointments from './pages/Appointments';
 import FindClinics from './pages/FindClinics';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function App() {
+  const navigate = useNavigate();
+
   return (
     <AuthProvider>
       <div>
@@ -23,8 +28,10 @@ function App() {
           <Route path="/find-clinics" element={<ProtectedRoute><FindClinics /></ProtectedRoute>} />
           <Route path="/book" element={<ProtectedRoute><BookAppointment /></ProtectedRoute>} />
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Link to="/profile">My Profile</Link>
       </div>
     </AuthProvider>
   );

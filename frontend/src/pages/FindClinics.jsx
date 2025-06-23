@@ -136,34 +136,39 @@ export default function FindClinics() {
       service.getDetails(
         {
           placeId: clinic.place_id,
-          fields: ['formatted_phone_number', 'website', 'opening_hours', 'reviews']
+          fields: [
+            'formatted_phone_number',
+            'website',
+            'opening_hours',
+            'reviews',
+            'formatted_address',
+            'url',
+            'international_phone_number'
+          ]
         },
         (place, status) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+            console.log('Clinic details:', place); // Debug log
             setClinicDetails(prev => ({
               ...prev,
               [clinic.place_id]: place
             }));
+          } else {
+            console.error('Error fetching clinic details:', status);
           }
         }
       );
     }
   }, [mapRef]);
 
-  const handleBookAppointment = (clinic) => {
-    // Create a doctor object from the clinic data
-    const doctor = {
-      _id: clinic.place_id,
-      name: clinic.name,
-      specialty: selectedSpecialty || 'General Practice',
-      consultationFee: 100, // Default fee, you might want to adjust this
-      location: clinic.vicinity,
-      rating: clinic.rating,
-      reviews: clinic.user_ratings_total
-    };
-
-    // Navigate to booking page with doctor data
-    navigate('/book', { state: { doctor } });
+  const handleBookAppointment = async (clinic) => {
+    const response = await fetch(`/api/clinic-details?name=${encodeURIComponent(clinic.name)}&address=${encodeURIComponent(clinic.vicinity)}`);
+    const details = await response.json();
+    if (details.website) {
+      window.open(details.website, '_blank');
+    } else {
+      // Show phone/address as fallback
+    }
   };
 
   const searchClinics = useCallback(async () => {

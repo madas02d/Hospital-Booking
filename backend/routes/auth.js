@@ -21,7 +21,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/me', protect, getMe);
 router.post('/google', verifyFirebaseToken, googleAuth);
-router.patch('/profile', protect, updateProfile);
+router.put('/profile', protect, updateProfile);
 
 // Google auth routes
 router.get('/google',
