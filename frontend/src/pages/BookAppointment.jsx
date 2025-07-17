@@ -1,9 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
-import { format } from 'date-fns';
+import { format, isWeekend, parseISO } from 'date-fns';
 import { FaCalendarAlt, FaClock, FaShieldAlt } from 'react-icons/fa';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// German public holidays for 2024 (add more as needed)
+const GERMAN_PUBLIC_HOLIDAYS_2024 = [
+  '2024-01-01', '2024-03-29', '2024-04-01', '2024-05-01',
+  '2024-05-09', '2024-05-20', '2024-10-03', '2024-12-25', '2024-12-26'
+];
+function isGermanHoliday(date) {
+  return GERMAN_PUBLIC_HOLIDAYS_2024.includes(format(date, 'yyyy-MM-dd'));
+}
+
+function getTimeOptions() {
+  const options = [];
+  for (let h = 7; h <= 18; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      if (h === 18 && m > 0) continue;
+      const hour = h.toString().padStart(2, '0');
+      const min = m.toString().padStart(2, '0');
+      options.push(`${hour}:${min}`);
+    }
+  }
+  return options;
+}
+
+function timeToMinutes(time) {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
 
 const HEALTH_INSURANCES = [
   { id: 'tk', name: 'Techniker Krankenkasse (TK)' },
@@ -32,6 +61,8 @@ const BookAppointment = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // const [bookedTimes, setBookedTimes] = useState([]); // No longer needed
+  const [availableTimes, setAvailableTimes] = useState(getTimeOptions());
 
   useEffect(() => {
     if (!currentUser) {
@@ -42,6 +73,37 @@ const BookAppointment = () => {
       setIsLoading(false);
     }
   }, [currentUser, doctor, navigate]);
+
+  // Fetch booked times for the selected doctor and date
+  useEffect(() => {
+    const fetchBookedTimes = async () => {
+      if (!formData.date || !doctor?._id) {
+        setAvailableTimes(getTimeOptions());
+        return;
+      }
+      try {
+        const res = await api.get('/api/appointments', { params: { doctorId: doctor._id, date: formData.date } });
+        const times = res.data
+          .filter(appt => appt.doctorId === doctor._id && appt.date.slice(0, 10) === formData.date && appt.status === 'scheduled')
+          .map(appt => appt.time);
+        // setBookedTimes(times); // No longer needed
+        // Build available times (exclude booked and within 30 min)
+        const allTimes = getTimeOptions();
+        const available = allTimes.filter(t =>
+          !times.some(bt => Math.abs(timeToMinutes(bt) - timeToMinutes(t)) < 30)
+        );
+        setAvailableTimes(available);
+        // If selected time is now unavailable, reset it
+        if (formData.time && !available.includes(formData.time)) {
+          setFormData(prev => ({ ...prev, time: '' }));
+        }
+      } catch {
+        setAvailableTimes(getTimeOptions());
+      }
+    };
+    fetchBookedTimes();
+    // eslint-disable-next-line
+  }, [formData.date, doctor?._id]);
 
   if (isLoading) {
     return (
@@ -65,6 +127,15 @@ const BookAppointment = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  // Date validation: prevent weekends and holidays
+  const handleDateChange = (date) => {
+    setError(null);
+    setFormData(prev => ({
+      ...prev,
+      date: date ? format(date, 'yyyy-MM-dd') : ''
     }));
   };
 
@@ -96,10 +167,14 @@ const BookAppointment = () => {
       }
     } catch (err) {
       console.error('Error booking appointment:', err);
-      setError(
-        err.response?.data?.message || 
-        'Failed to book appointment. Please try again.'
-      );
+      if (err.response?.status === 409) {
+        setError('This time slot is already booked for this doctor. Please choose another time.');
+      } else {
+        setError(
+          err.response?.data?.message || 
+          'Failed to book appointment. Please try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -164,14 +239,18 @@ const BookAppointment = () => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaCalendarAlt className="h-5 w-5 text-gray-400" />
                 </div>
-                <input
-                  type="date"
-                  name="date"
-                  id="date"
-                  required
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  value={formData.date}
-                  onChange={handleChange}
+                <DatePicker
+                  selected={formData.date ? parseISO(formData.date) : null}
+                  onChange={date => {
+                    setError(null);
+                    setFormData(prev => ({
+                      ...prev,
+                      date: date ? format(date, 'yyyy-MM-dd') : ''
+                    }));
+                  }}
+                  minDate={new Date()}
+                  filterDate={date => !isWeekend(date) && !isGermanHoliday(date)}
+                  dateFormat="yyyy-MM-dd"
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
                 />
               </div>
@@ -185,15 +264,19 @@ const BookAppointment = () => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaClock className="h-5 w-5 text-gray-400" />
                 </div>
-                <input
-                  type="time"
-                  name="time"
+                <select
                   id="time"
+                  name="time"
                   required
                   value={formData.time}
                   onChange={handleChange}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                />
+                >
+                  <option value="">Select a time</option>
+                  {availableTimes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
