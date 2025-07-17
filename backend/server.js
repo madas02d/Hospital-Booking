@@ -1,47 +1,47 @@
-// Load env vars
-const dotenv = require('dotenv');
-dotenv.config();
-
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const passport = require('passport');
-require('./config/passport');
-console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
-console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-// Create Express app
 const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
+  origin: 'http://localhost:5173',
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
+// Body parser
+app.use(express.json());
+
+// MongoDB connection options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
 };
 
-// Middleware
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(passport.initialize());
-
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/medical_app')
+mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log('MongoDB Connection Error:', err));
+  .catch(err => {
+    console.log('MongoDB Connection Error:', err);
+    process.exit(1); // Exit if cannot connect to database
+  });
 
-// Routes
+// ROUTES
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/appointments', require('./routes/appointments'));
-app.use('/api/medical-records', require('./routes/medicalRecords'));
-app.use('/api/email', require('./routes/email'));
+// Add other routes as needed
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+// Basic test route
+app.get('/', (req, res) => {
+  res.json({ message: 'API is working!' });
 });
 
 const PORT = process.env.PORT || 5000;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/api';
 import StatCard from '../components/dashboard/StatCard';
 import ActivityItem from '../components/dashboard/ActivityItem';
 import AppointmentCard from '../components/appointments/AppointmentCard';
@@ -25,13 +25,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get('http://localhost:5000/api/appointments', {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`
-          },
-          withCredentials: true
-        });
-        
+        const response = await api.get('/api/appointments');
         const appointments = response.data;
         
         // Calculate statistics
@@ -40,20 +34,22 @@ const Dashboard = () => {
           new Date(apt.date) > new Date() && apt.status === 'scheduled'
         ).length;
         const totalSpent = appointments.reduce((sum, apt) => 
-          apt.status === 'completed' ? sum + apt.consultationFee : sum, 0
+          apt.status === 'completed' ? sum + (apt.consultationFee || 0) : sum, 0
         );
 
         setStats({
           totalAppointments,
           upcomingAppointments,
-          totalSpent
+          totalSpent: totalSpent.toFixed(2)
         });
 
-        const nextAppt = appointments.find(apt => 
-          new Date(apt.date) > new Date() && apt.status === 'scheduled'
-        );
+        // Find next appointment
+        const nextAppt = appointments
+          .filter(apt => new Date(apt.date) > new Date() && apt.status === 'scheduled')
+          .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
         setNextAppointment(nextAppt);
 
+        // Process recent activity
         const activities = appointments.map(apt => ({
           id: apt._id,
           type: apt.status === 'cancelled' ? 'cancellation' : 
@@ -65,13 +61,18 @@ const Dashboard = () => {
           date: apt.createdAt || apt.date,
           doctorName: apt.doctorName,
           appointmentDate: apt.date,
-          appointmentTime: apt.time
+          appointmentTime: apt.time,
+          status: apt.status
         }));
+        
         activities.sort((a, b) => new Date(b.date) - new Date(a.date));
         setRecentActivity(activities.slice(0, 5));
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
+        setError(
+          err.response?.data?.message || 
+          'Failed to load dashboard data. Please try again.'
+        );
       } finally {
         setLoading(false);
       }
@@ -113,9 +114,22 @@ const Dashboard = () => {
     );
   }
 
-  const handleCancelAppointment = async () => {
-    // Refresh dashboard data after cancellation
-    await fetchDashboardData();
+  const handleCancelAppointment = async (appointmentId) => {
+    try {
+      await api.patch(`/api/appointments/${appointmentId}/cancel`);
+      // Refresh dashboard data after cancellation
+      if (currentUser) {
+        const response = await api.get('/api/appointments');
+        const appointments = response.data;
+        // ... repeat stats logic if needed ...
+      }
+    } catch (err) {
+      console.error('Error cancelling appointment:', err);
+      setError(
+        err.response?.data?.message || 
+        'Failed to cancel appointment. Please try again.'
+      );
+    }
   };
 
   const quickActions = [

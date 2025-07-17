@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/api';
 import { format } from 'date-fns';
-import { FaCalendarAlt, FaClock, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaShieldAlt } from 'react-icons/fa';
+
+const HEALTH_INSURANCES = [
+  { id: 'tk', name: 'Techniker Krankenkasse (TK)' },
+  { id: 'aok', name: 'AOK' },
+  { id: 'barmer', name: 'Barmer' },
+  { id: 'dak', name: 'DAK-Gesundheit' },
+  { id: 'ikk', name: 'IKK classic' },
+  { id: 'hkk', name: 'HKK' },
+  { id: 'heag', name: 'HEAG' },
+  { id: 'bkk', name: 'BKK' }
+];
 
 const BookAppointment = () => {
   const navigate = useNavigate();
@@ -15,18 +26,39 @@ const BookAppointment = () => {
     date: '',
     time: '',
     reason: '',
-    notes: ''
+    notes: '',
+    insurance: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
     } else if (!doctor) {
       navigate('/find-clinics');
+    } else {
+      setIsLoading(false);
     }
   }, [currentUser, doctor, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doctor) {
+    return null; // This will be handled by the useEffect redirect
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,32 +74,32 @@ const BookAppointment = () => {
     setError(null);
 
     try {
-      const response = await axios.post(
-        'http://localhost:5000/api/appointments',
-        {
-          doctorId: doctor._id,
-          doctorName: doctor.name,
-          specialty: doctor.specialty,
-          consultationFee: doctor.consultationFee,
-          date: formData.date,
-          time: formData.time,
-          reason: formData.reason,
-          notes: formData.notes
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`
-          },
-          withCredentials: true
-        }
-      );
+      const appointmentData = {
+        doctorId: doctor._id,
+        doctorName: doctor.name,
+        specialty: doctor.specialty,
+        insurance: formData.insurance,
+        date: formData.date,
+        time: formData.time,
+        reason: formData.reason,
+        notes: formData.notes
+      };
+
+      const response = await api.post('/api/appointments', appointmentData);
 
       if (response.data) {
-        navigate('/appointments');
+        navigate('/appointments', { 
+          state: { 
+            message: 'Appointment booked successfully!' 
+          }
+        });
       }
     } catch (err) {
       console.error('Error booking appointment:', err);
-      setError(err.response?.data?.message || 'Failed to book appointment. Please try again.');
+      setError(
+        err.response?.data?.message || 
+        'Failed to book appointment. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -84,8 +116,8 @@ const BookAppointment = () => {
               <p className="text-gray-600">{doctor.specialty}</p>
             </div>
             <div className="flex items-center text-gray-600">
-              <FaMoneyBillWave className="mr-2" />
-              <span>Consultation Fee: ${doctor.consultationFee}</span>
+              <FaShieldAlt className="mr-2" />
+              <span>Accepts German Health Insurance</span>
             </div>
           </div>
         </div>
@@ -98,6 +130,32 @@ const BookAppointment = () => {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="insurance" className="block text-sm font-medium text-gray-700">
+                Health Insurance
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaShieldAlt className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="insurance"
+                  name="insurance"
+                  required
+                  value={formData.insurance}
+                  onChange={handleChange}
+                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                >
+                  <option value="">Select your health insurance</option>
+                  {HEALTH_INSURANCES.map((insurance) => (
+                    <option key={insurance.id} value={insurance.id}>
+                      {insurance.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label htmlFor="date" className="block text-sm font-medium text-gray-700">
                 Date

@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
-const { protect } = require('../middleware/auth');
+const { protect, handleCors } = require('../middleware/auth');
+
+// Apply CORS handler to all routes
+router.use(handleCors);
 
 // Get all appointments for the authenticated user
 router.get('/', protect, async (req, res) => {
