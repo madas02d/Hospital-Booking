@@ -103,4 +103,7 @@ const sendTokenResponse = (user, statusCode, res) => {
         role: user.role
       }
     });
-}; 
+};
+
+exports.googleAuth = (req, res) => { res.send('Not implemented'); };
+exports.updateProfile = (req, res) => { res.send('Not implemented'); }; 
