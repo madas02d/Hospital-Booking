@@ -10,7 +10,6 @@ import Appointments from './pages/Appointments';
 import FindClinics from './pages/FindClinics';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
 function App() {
@@ -31,7 +30,6 @@ function App() {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <Link to="/profile">My Profile</Link>
       </div>
     </AuthProvider>
   );
