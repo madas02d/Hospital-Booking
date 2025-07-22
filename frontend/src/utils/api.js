@@ -9,6 +9,7 @@ const api = axios.create({
 });
 
 // Attach token if it exists
+// TODO: Remove this once we have a proper authentication system
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
