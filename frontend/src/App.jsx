@@ -31,7 +31,6 @@ function App() {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <Link to="/profile">My Profile</Link>
       </div>
     </AuthProvider>
   );
