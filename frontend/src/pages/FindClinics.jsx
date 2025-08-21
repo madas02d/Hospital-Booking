@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useJsApiLoader } from '@react-google-maps/api';
 import ClinicMap from '../components/map/ClinicMap';
 import { useAuth } from '../contexts/AuthContext';
 import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt, FaShieldAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
 
 // Move libraries outside component to prevent recreation
 const GOOGLE_MAPS_LIBRARIES = ['places'];
@@ -116,8 +115,8 @@ export default function FindClinics() {
           },
           {
             enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
+            timeout: 15000,
+            maximumAge: 60000
           }
         );
       }
@@ -189,66 +188,59 @@ export default function FindClinics() {
   };
 
   const searchClinics = useCallback(async () => {
-    if (!mapRef || !center) return;
+  if (!mapRef || !center) return;
 
-    setLoading(true);
-    const service = new window.google.maps.places.PlacesService(mapRef);
-    
-    // Create a bounds object for the search
-    const bounds = new window.google.maps.LatLngBounds(
-      new window.google.maps.LatLng(center.lat - 0.1, center.lng - 0.1),
-      new window.google.maps.LatLng(center.lat + 0.1, center.lng + 0.1)
-    );
+  setLoading(true);
 
+  try {
+    // Create the Place search request (Text Search)
     const request = {
-      location: center,
-      radius: searchRadius,
-      type: 'doctor', // Changed from array to single type
-      keyword: selectedSpecialty || undefined, // Only include keyword if specialty is selected
-      bounds: bounds
+      textQuery: `${selectedSpecialty || 'doctor'} clinic`,
+      locationBias: {
+        center: new window.google.maps.LatLng(center.lat, center.lng),
+        radius: searchRadius
+      },
+      fields: [
+        'displayName',
+        'formattedAddress',
+        'location',
+        'businessStatus',
+        'rating',
+        'userRatingCount',
+        'id'
+      ]
     };
 
-    try {
-      service.nearbySearch(request, (results, status) => {
-        console.log('Places API Status:', status); // Debug log
-        
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-          console.log('Found clinics:', results.length); // Debug log
-          setClinics(results);
-        } else {
-          console.error('Places API error:', status);
-          let errorMessage = 'Error finding nearby clinics';
-          
-          // More specific error messages
-          switch (status) {
-            case window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS:
-              errorMessage = 'No clinics found in this area';
-              break;
-            case window.google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT:
-              errorMessage = 'Search limit exceeded. Please try again later';
-              break;
-            case window.google.maps.places.PlacesServiceStatus.REQUEST_DENIED:
-              errorMessage = 'Request denied. Please check your API key';
-              break;
-            case window.google.maps.places.PlacesServiceStatus.INVALID_REQUEST:
-              errorMessage = 'Invalid request. Please try different search parameters';
-              break;
-            default:
-              errorMessage = `Error: ${status}`;
+    const { places } = await window.google.maps.places.Place.searchByText(request);
+
+    if (places && places.length > 0) {
+      setClinics(
+        places.map(p => ({
+          place_id: p.id,
+          name: p.displayName,
+          vicinity: p.formattedAddress,
+          rating: p.rating,
+          user_ratings_total: p.userRatingCount,
+          geometry: {
+            location: {
+              lat: p.location.lat(),
+              lng: p.location.lng()
+            }
           }
-          
-          setError(errorMessage);
-          setClinics([]);
-        }
-        setLoading(false);
-      });
-    } catch (error) {
-      console.error('Error in nearbySearch:', error);
-      setError('An unexpected error occurred while searching for clinics');
+        }))
+      );
+      setError(null);
+    } else {
       setClinics([]);
-      setLoading(false);
+      setError('No clinics found in this area');
     }
-  }, [mapRef, center, searchRadius, selectedSpecialty]);
+  } catch (err) {
+    console.error('Error fetching clinics:', err);
+    setError('Failed to load clinics. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+}, [mapRef, center, searchRadius, selectedSpecialty]);
 
   // Search for clinics when map is ready
   useEffect(() => {
