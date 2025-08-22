@@ -29,9 +29,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-      <Footer />
-    </div>
+
   );
 }
 
