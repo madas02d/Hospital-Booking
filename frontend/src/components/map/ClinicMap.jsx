@@ -1,170 +1,150 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
-import BookingForm from '../booking/BookingForm';
+import React, { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '500px'
-};
+// You'll need to add your Mapbox access token to your environment variables
+// or replace this with your actual token
+mapboxgl.accessToken = 'pk.eyJ1IjoieW91ci11c2VybmFtZSIsImEiOiJjbGV4YW1wbGUifQ.example';
 
-const defaultCenter = {
-  lat: 52.5200,
-  lng: 13.4050
-};
+const ClinicMap = ({ clinics = [], onClinicSelect }) => {
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const [lng, setLng] = useState(-70.9);
+  const [lat, setLat] = useState(42.35);
+  const [zoom, setZoom] = useState(9);
 
-function ClinicMap({ center, clinics = [], mapRef, selectedClinic, onClinicSelect, onMapLoad }) {
-  const [mapError, setMapError] = useState(null);
-  const [showBookingForm, setShowBookingForm] = useState(false);
+  useEffect(() => {
+    if (map.current) return; // initialize map only once
 
-  const onLoad = useCallback((map) => {
-    try {
-      if (onMapLoad) {
-        onMapLoad(map);
-      }
-      if (mapRef) {
-        mapRef.current = map;
-      }
-    } catch (error) {
-      console.error('Error loading map:', error);
-      setMapError('Failed to load map');
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [lng, lat],
+      zoom: zoom
+    });
+
+    // Add navigation controls
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    // Add geocoder
+    const geocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: 'Search for clinics or addresses',
+      countries: 'us,ca,gb,de,fr,au',
+      types: 'address,poi'
+    });
+
+    map.current.addControl(geocoder, 'top-left');
+
+    // Add geolocate control
+    const geolocate = new mapboxgl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true
+      },
+      trackUserLocation: true,
+      showUserHeading: true
+    });
+    map.current.addControl(geolocate, 'top-left');
+
+    // Handle map events
+    map.current.on('move', () => {
+      setLng(map.current.getCenter().lng.toFixed(4));
+      setLat(map.current.getCenter().lat.toFixed(4));
+      setZoom(map.current.getZoom().toFixed(2));
+    });
+
+    // Get user location on mount
+    geolocate.trigger();
+
+  }, [lng, lat, zoom]);
+
+  // Add clinic markers when clinics data changes
+  useEffect(() => {
+    if (!map.current || !clinics.length) return;
+
+    // Remove existing markers
+    const markers = document.querySelectorAll('.clinic-marker');
+    markers.forEach(marker => marker.remove());
+
+    // Add new markers
+    clinics.forEach(clinic => {
+      const el = document.createElement('div');
+      el.className = 'clinic-marker';
+      el.style.width = '25px';
+      el.style.height = '25px';
+      el.style.borderRadius = '50%';
+      el.style.backgroundColor = '#3B82F6';
+      el.style.border = '3px solid white';
+      el.style.cursor = 'pointer';
+      el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+
+      // Create popup
+      const popup = new mapboxgl.Popup({ offset: 25 })
+        .setHTML(`
+          <div class="p-2">
+            <h3 class="font-semibold text-lg">${clinic.name}</h3>
+            <p class="text-gray-600">${clinic.specialty}</p>
+            <p class="text-sm text-gray-500">${clinic.address}</p>
+            <button 
+              class="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              onclick="window.selectClinic('${clinic.id}')"
+            >
+              Select Clinic
+            </button>
+          </div>
+        `);
+
+      // Add marker to map
+      new mapboxgl.Marker(el)
+        .setLngLat([clinic.longitude, clinic.latitude])
+        .setPopup(popup)
+        .addTo(map.current);
+
+      // Add click handler
+      el.addEventListener('click', () => {
+        if (onClinicSelect) {
+          onClinicSelect(clinic);
+        }
+      });
+    });
+
+    // Fit map to show all clinics
+    if (clinics.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      clinics.forEach(clinic => {
+        bounds.extend([clinic.longitude, clinic.latitude]);
+      });
+      map.current.fitBounds(bounds, { padding: 50 });
     }
-  }, [mapRef, onMapLoad]);
 
-  const onError = useCallback((error) => {
-    console.error('Map error:', error);
-    setMapError('An error occurred with the map');
-  }, []);
+  }, [clinics, onClinicSelect]);
 
-  const handleBookingClick = () => {
-    setShowBookingForm(true);
-  };
+  // Make selectClinic function globally available for popup buttons
+  useEffect(() => {
+    window.selectClinic = (clinicId) => {
+      const clinic = clinics.find(c => c.id === clinicId);
+      if (clinic && onClinicSelect) {
+        onClinicSelect(clinic);
+      }
+    };
 
-  const handleCloseBooking = () => {
-    setShowBookingForm(false);
-  };
-
-  if (mapError) {
-    return (
-      <div className="h-[500px] flex items-center justify-center bg-gray-100">
-        <div className="text-red-600">{mapError}</div>
-      </div>
-    );
-  }
+    return () => {
+      delete window.selectClinic;
+    };
+  }, [clinics, onClinicSelect]);
 
   return (
-    <GoogleMap
-      center={center || defaultCenter}
-      zoom={13}
-      mapContainerStyle={mapContainerStyle}
-      onLoad={onLoad}
-      onError={onError}
-      options={{
-        zoomControl: true,
-        streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: true,
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }]
-          }
-        ]
-      }}
-    >
-      {/* User's current location */}
-      <Marker
-        position={center || defaultCenter}
-        icon={{
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: "#4F46E5",
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#FFFFFF"
-        }}
-      />
-
-      {/* Clinic markers */}
-      {clinics.map((clinic) => (
-        <Marker
-          key={clinic.place_id}
-          position={clinic.geometry.location}
-          onClick={() => onClinicSelect(clinic)}
-          icon={{
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 7,
-            fillColor: selectedClinic?.place_id === clinic.place_id ? "#2563EB" : "#10B981",
-            fillOpacity: 1,
-            strokeWeight: 2,
-            strokeColor: "#FFFFFF"
-          }}
-        />
-      ))}
-
-      {/* Info window for selected clinic */}
-      {selectedClinic && (
-        <InfoWindow
-          position={selectedClinic.geometry.location}
-          onCloseClick={() => {
-            onClinicSelect(null);
-            setShowBookingForm(false);
-          }}
-        >
-          <div className="p-2 max-w-xs">
-            <h3 className="font-semibold text-lg">{selectedClinic.name}</h3>
-            <p className="text-gray-600 mt-1">{selectedClinic.vicinity}</p>
-            
-            {selectedClinic.rating && (
-              <div className="flex items-center mt-2">
-                <div className="text-yellow-600">
-                  {'★'.repeat(Math.round(selectedClinic.rating))}
-                  {'☆'.repeat(5 - Math.round(selectedClinic.rating))}
-                </div>
-                <span className="text-sm text-gray-600 ml-2">
-                  ({selectedClinic.user_ratings_total} reviews)
-                </span>
-              </div>
-            )}
-            
-            {selectedClinic.opening_hours && (
-              <div className={`text-sm mt-2 ${
-                selectedClinic.opening_hours.open_now ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {selectedClinic.opening_hours.open_now ? 'Open Now' : 'Closed'}
-              </div>
-            )}
-            
-            <div className="mt-3 space-y-2">
-              {showBookingForm ? (
-                <BookingForm
-                  clinic={selectedClinic}
-                  onClose={handleCloseBooking}
-                />
-              ) : (
-                <>
-                  <button
-                    onClick={handleBookingClick}
-                    className="block w-full text-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    Book Appointment
-                  </button>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${selectedClinic.geometry.location.lat()},${selectedClinic.geometry.location.lng()}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    Get Directions
-                  </a>
-                </>
-              )}
-            </div>
-          </div>
-        </InfoWindow>
-      )}
-    </GoogleMap>
+    <div className="relative w-full h-full">
+      <div ref={mapContainer} className="w-full h-full rounded-lg" />
+      
+      {/* Map controls info */}
+      <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 p-2 rounded text-xs text-gray-600">
+        <div>Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}</div>
+      </div>
+    </div>
   );
-}
+};
 
-export default ClinicMap; 
+export default ClinicMap;

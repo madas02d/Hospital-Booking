@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
         const response = await api.get('/api/auth/me')
-        setCurrentUser(response.data)
+        setCurrentUser(response.data.data)
       }
     } catch (error) {
       console.error('Auth check error:', error)
@@ -41,9 +41,9 @@ export function AuthProvider({ children }) {
     checkAuth()
   }, [])
 
-  const signup = async (name, email, password) => {
+  const signup = async (firstName, lastName, email, password) => {
     try {
-      const res = await api.post('/api/auth/register', { name, email, password })
+      const res = await api.post('/api/auth/register', { firstName, lastName, email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -81,12 +81,24 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await api.put('/api/auth/profile', profileData)
+      setCurrentUser(response.data.data)
+      return response.data
+    } catch (error) {
+      console.error('Profile update error:', error.response?.data || error.message)
+      throw error.response?.data || error
+    }
+  }
+
   const value = {
     currentUser,
     loading,
     signup,
     login,
-    logout
+    logout,
+    updateProfile
   }
 
   if (loading) {

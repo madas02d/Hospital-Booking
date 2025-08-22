@@ -23,6 +23,14 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+exports.verifyFirebaseToken = async (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+  }
+  next();
+};
+
 // Grant access to specific roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
