@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 
 function Signup() {
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -18,15 +19,15 @@ function Signup() {
     setLoading(true)
 
     try {
-      await signup(name, email, password)
+      await signup(firstName, lastName, email, password)
       navigate('/dashboard')
     } catch (error) {
       console.error('Signup error:', error)
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.message === 'User already exists') {
         setError('This email is already registered. Please login instead.')
-      } else if (error.code === 'auth/weak-password') {
+      } else if (error.message && error.message.includes('password')) {
         setError('Password should be at least 6 characters long.')
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (error.message && error.message.includes('email')) {
         setError('Please enter a valid email address.')
       } else {
         setError('Failed to create an account. Please try again.')
@@ -50,15 +51,27 @@ function Signup() {
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            required
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-gray-700 mb-2">First Name *</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2">Last Name *</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              required
+            />
+          </div>
         </div>
         <div className="mb-4">
           <label className="block text-gray-700 mb-2">Email</label>

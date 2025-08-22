@@ -1,3 +1,5 @@
+import React from 'react';
+
 function ActivityItem({ activity }) {
   const getActivityIcon = (type) => {
     switch (type) {
