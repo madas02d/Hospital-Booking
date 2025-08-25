@@ -3,6 +3,13 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -123,20 +130,30 @@ exports.googleAuth = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email, phone, dateOfBirth, gender, address } = req.body;
+    const { name, email, phone, dateOfBirth, gender, address, bloodGroup, profilePicture } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Update fields
+    // Update basic fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (dateOfBirth) user.dateOfBirth = dateOfBirth;
     if (gender) user.gender = gender;
-    if (address) user.address = address;
+    if (bloodGroup) user.bloodGroup = bloodGroup;
+    if (profilePicture) user.profilePicture = profilePicture;
+
+    // Address: accept either a string or structured object
+    if (address) {
+      if (typeof address === 'string') {
+        user.address = { street: address };
+      } else if (typeof address === 'object') {
+        user.address = address;
+      }
+    }
 
     await user.save();
 
@@ -149,11 +166,45 @@ exports.updateProfile = async (req, res) => {
         phone: user.phone,
         dateOfBirth: user.dateOfBirth,
         gender: user.gender,
-        address: user.address
+        bloodGroup: user.bloodGroup,
+        address: user.address,
+        profilePicture: user.profilePicture,
+        role: user.role
       }
     });
   } catch (error) {
     console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Change password
+// @route   PUT /api/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current and new password are required' });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -166,6 +217,45 @@ exports.logout = async (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Upload profile picture via Cloudinary
+// @route   POST /api/auth/profile/picture
+// @access  Private
+exports.uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const uploadResult = await cloudinary.uploader.upload_stream(
+      {
+        folder: 'profile-pictures',
+        public_id: req.user.id,
+        overwrite: true,
+        resource_type: 'image'
+      },
+      async (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return res.status(500).json({ message: 'Failed to upload image' });
+        }
+        const user = await User.findById(req.user.id);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+        user.profilePicture = result.secure_url;
+        await user.save();
+        return res.json({ success: true, url: result.secure_url });
+      }
+    );
+
+    // Pipe the buffer to Cloudinary
+    uploadResult.end(req.file.buffer);
+  } catch (error) {
+    console.error('Upload profile picture error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { auth } from '../../config/firebase'
 
 function UserAppointments() {
   const { user } = useAuth()
@@ -11,9 +12,14 @@ function UserAppointments() {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
+        const firebaseUid = auth.currentUser?.uid
+        const userId = firebaseUid || user?.id || user?._id || user?.uid
+        if (!userId) {
+          return
+        }
         const q = query(
           collection(db, 'appointments'),
-          where('userId', '==', user.uid)
+          where('userId', '==', userId)
         )
         const querySnapshot = await getDocs(q)
         const appointmentList = querySnapshot.docs.map(doc => ({
@@ -28,7 +34,7 @@ function UserAppointments() {
       }
     }
 
-    if (user) {
+    if (user || auth.currentUser) {
       fetchAppointments()
     }
   }, [user])

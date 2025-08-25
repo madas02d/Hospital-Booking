@@ -1,37 +1,33 @@
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 import ProfilePicture from '../components/profile/ProfilePicture'
-import { updateProfile as updateFirebaseProfile } from 'firebase/auth'
-import { auth } from '../config/firebase'
 import UserAppointments from '../components/profile/UserAppointments'
-import api from '../utils/api'
-import { Link } from 'react-router-dom'
 
 function Profile() {
-  const { user, updateProfile, logout } = useAuth()
+  const { user, currentUser, updateProfile, changePassword, logout } = useAuth()
+  const resolvedUser = currentUser || user
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    dateOfBirth: user?.dateOfBirth || '',
-    gender: user?.gender || '',
-    bloodGroup: user?.bloodGroup || ''
+    name: resolvedUser?.name || '',
+    email: resolvedUser?.email || '',
+    phone: resolvedUser?.phone || '',
+    address: typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street || '') : (resolvedUser?.address || ''),
+    dateOfBirth: resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : '',
+    gender: resolvedUser?.gender || '',
+    bloodGroup: resolvedUser?.bloodGroup || ''
   })
+  const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      // In a real app, you would make an API call here
-      await api.put('/api/auth/profile', formData)
-      updateProfile(formData)
+      await updateProfile(formData)
       setMessage({ type: 'success', text: 'Profile updated successfully' })
       setIsEditing(false)
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to update profile' })
+      setMessage({ type: 'error', text: err?.message || 'Failed to update profile' })
     }
   }
 
@@ -45,11 +41,25 @@ function Profile() {
 
   const handlePhotoUpdate = async (photoURL) => {
     try {
-      await updateFirebaseProfile(auth.currentUser, { photoURL })
-      updateProfile({ photoURL })
+      await updateProfile({ profilePicture: photoURL })
       setMessage({ type: 'success', text: 'Profile picture updated successfully' })
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to update profile picture' })
+    }
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    if (!passwords.newPassword || passwords.newPassword !== passwords.confirmNewPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' })
+      return
+    }
+    try {
+      await changePassword(passwords.currentPassword, passwords.newPassword)
+      setPasswords({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
+      setMessage({ type: 'success', text: 'Password changed successfully' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to change password' })
     }
   }
 
@@ -67,12 +77,12 @@ function Profile() {
                 Edit Profile
               </Button>
             )}
-            <Button 
+            {/* <Button 
               variant="secondary" 
               onClick={logout}
             >
               Logout
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -86,7 +96,7 @@ function Profile() {
 
         <div className="mb-8">
           <ProfilePicture 
-            photoURL={user?.photoURL}
+            photoURL={resolvedUser?.profilePicture || resolvedUser?.photoURL}
             onPhotoUpdate={handlePhotoUpdate}
           />
         </div>
@@ -106,7 +116,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{user?.name}</p>
+                <p className="text-gray-900">{resolvedUser?.name}</p>
               )}
             </div>
 
@@ -114,17 +124,7 @@ function Profile() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              ) : (
-                <p className="text-gray-900">{user?.email}</p>
-              )}
+              <p className="text-gray-900">{resolvedUser?.email}</p>
             </div>
 
             <div>
@@ -140,7 +140,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{user?.phone}</p>
+                <p className="text-gray-900">{resolvedUser?.phone}</p>
               )}
             </div>
 
@@ -157,7 +157,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{user?.dateOfBirth || 'Not set'}</p>
+                <p className="text-gray-900">{resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : 'Not set'}</p>
               )}
             </div>
 
@@ -178,7 +178,7 @@ function Profile() {
                   <option value="other">Other</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{user?.gender || 'Not set'}</p>
+                <p className="text-gray-900">{resolvedUser?.gender || 'Not set'}</p>
               )}
             </div>
 
@@ -204,7 +204,7 @@ function Profile() {
                   <option value="O-">O-</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{user?.bloodGroup || 'Not set'}</p>
+                <p className="text-gray-900">{resolvedUser?.bloodGroup || 'Not set'}</p>
               )}
             </div>
           </div>
@@ -222,7 +222,7 @@ function Profile() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             ) : (
-              <p className="text-gray-900">{user?.address || 'Not set'}</p>
+              <p className="text-gray-900">{(typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street) : resolvedUser?.address) || 'Not set'}</p>
             )}
           </div>
 
@@ -234,13 +234,13 @@ function Profile() {
                 onClick={() => {
                   setIsEditing(false)
                   setFormData({
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    phone: user?.phone || '',
-                    address: user?.address || '',
-                    dateOfBirth: user?.dateOfBirth || '',
-                    gender: user?.gender || '',
-                    bloodGroup: user?.bloodGroup || ''
+                    name: resolvedUser?.name || '',
+                    email: resolvedUser?.email || '',
+                    phone: resolvedUser?.phone || '',
+                    address: typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street || '') : (resolvedUser?.address || ''),
+                    dateOfBirth: resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : '',
+                    gender: resolvedUser?.gender || '',
+                    bloodGroup: resolvedUser?.bloodGroup || ''
                   })
                 }}
               >
@@ -252,6 +252,42 @@ function Profile() {
             </div>
           )}
         </form>
+
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+          <form onSubmit={handlePasswordChange} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+              <input
+                type="password"
+                value={passwords.currentPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, currentPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+              <input
+                type="password"
+                value={passwords.newPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, newPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwords.confirmNewPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, confirmNewPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="md:col-span-3 flex justify-end">
+              <Button type="submit" variant="secondary">Update Password</Button>
+            </div>
+          </form>
+        </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200">
           <UserAppointments />

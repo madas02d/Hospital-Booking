@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import axios from 'axios'
 
 const AuthContext = createContext(null)
@@ -81,12 +82,26 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const updateProfile = async (updates) => {
+    const res = await api.put('/api/auth/profile', updates)
+    setCurrentUser(res.data.user)
+    return res.data.user
+  }
+
+  const changePassword = async (currentPassword, newPassword) => {
+    const res = await api.put('/api/auth/change-password', { currentPassword, newPassword })
+    return res.data
+  }
+
   const value = {
     currentUser,
+    user: currentUser,
     loading,
     signup,
     login,
-    logout
+    logout,
+    updateProfile,
+    changePassword
   }
 
   if (loading) {
@@ -102,6 +117,10 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+AuthProvider.propTypes = {
+  children: PropTypes.node
 }
 
 export const useAuth = () => useContext(AuthContext) 

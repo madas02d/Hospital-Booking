@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 const {
   register,
   login,
   getMe,
   googleAuth,
-  updateProfile
+  updateProfile,
+  changePassword,
+  uploadProfilePicture
 } = require('../controllers/auth');
 const { protect, verifyFirebaseToken, handleCors } = require('../middleware/auth');
 const User = require('../models/User');
@@ -22,6 +27,8 @@ router.post('/login', login);
 router.get('/me', protect, getMe);
 router.post('/google', verifyFirebaseToken, googleAuth);
 router.put('/profile', protect, updateProfile);
+router.put('/change-password', protect, changePassword);
+router.post('/profile/picture', protect, upload.single('file'), uploadProfilePicture);
 
 // Google auth routes
 router.get('/google',
