@@ -219,6 +219,7 @@ const FindClinics = () => {
       if (map.current) {
         fallbackClinics.forEach(clinic => {
           const marker = new mapboxgl.Marker({ 
+            // TODO: Add color based on clinic type
             color: '#10B981',
             className: 'clinic-marker'
           })
