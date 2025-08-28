@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 import ProfilePicture from '../components/profile/ProfilePicture'
 import UserAppointments from '../components/profile/UserAppointments'
 
 function Profile() {
-  const { currentUser, updateProfile, logout } = useAuth()
+  const { currentUser, updateProfile, changePassword } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     firstName: currentUser?.firstName || '',
@@ -112,7 +112,7 @@ function Profile() {
 
         <div className="mb-8">
           <ProfilePicture 
-            photoURL={currentUser?.photoURL}
+            photoURL={currentUser?.profilePicture || currentUser?.photoURL}
             onPhotoUpdate={handlePhotoUpdate}
           />
         </div>

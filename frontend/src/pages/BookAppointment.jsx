@@ -49,7 +49,22 @@ const BookAppointment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
-  const doctor = location.state?.doctor;
+
+  // Accept either a selected doctor or a clinic passed from FindClinics
+  const passedDoctor = location.state?.doctor;
+  const passedClinic = location.state?.clinicName ? {
+    name: location.state?.clinicName,
+    address: location.state?.clinicAddress,
+    coordinates: location.state?.clinicCoordinates
+  } : null;
+
+  // Normalize to a booking target
+  const bookingTarget = passedDoctor || (passedClinic ? {
+    _id: passedClinic.coordinates ? `${passedClinic.coordinates[0]},${passedClinic.coordinates[1]}` : passedClinic.name,
+    name: passedClinic.name,
+    specialty: 'Clinic Visit',
+    address: passedClinic.address
+  } : null);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -61,39 +76,35 @@ const BookAppointment = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  // const [bookedTimes, setBookedTimes] = useState([]); // No longer needed
   const [availableTimes, setAvailableTimes] = useState(getTimeOptions());
 
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
-    } else if (!doctor) {
+    } else if (!bookingTarget) {
       navigate('/find-clinics');
     } else {
       setIsLoading(false);
     }
-  }, [currentUser, doctor, navigate]);
+  }, [currentUser, bookingTarget, navigate]);
 
   // Fetch booked times for the selected doctor and date
   useEffect(() => {
     const fetchBookedTimes = async () => {
-      if (!formData.date || !doctor?._id) {
+      if (!formData.date || !bookingTarget?._id) {
         setAvailableTimes(getTimeOptions());
         return;
       }
       try {
-        const res = await api.get('/api/appointments', { params: { doctorId: doctor._id, date: formData.date } });
+        const res = await api.get('/appointments', { params: { doctorId: bookingTarget._id, date: formData.date } });
         const times = res.data
-          .filter(appt => appt.doctorId === doctor._id && appt.date.slice(0, 10) === formData.date && appt.status === 'scheduled')
+          .filter(appt => appt.doctorId === bookingTarget._id && appt.date.slice(0, 10) === formData.date && appt.status === 'scheduled')
           .map(appt => appt.time);
-        // setBookedTimes(times); // No longer needed
-        // Build available times (exclude booked and within 30 min)
         const allTimes = getTimeOptions();
         const available = allTimes.filter(t =>
           !times.some(bt => Math.abs(timeToMinutes(bt) - timeToMinutes(t)) < 30)
         );
         setAvailableTimes(available);
-        // If selected time is now unavailable, reset it
         if (formData.time && !available.includes(formData.time)) {
           setFormData(prev => ({ ...prev, time: '' }));
         }
@@ -103,7 +114,7 @@ const BookAppointment = () => {
     };
     fetchBookedTimes();
     // eslint-disable-next-line
-  }, [formData.date, doctor?._id]);
+  }, [formData.date, bookingTarget?._id]);
 
   if (isLoading) {
     return (
@@ -118,8 +129,8 @@ const BookAppointment = () => {
     );
   }
 
-  if (!doctor) {
-    return null; // This will be handled by the useEffect redirect
+  if (!bookingTarget) {
+    return null; // handled by redirect
   }
 
   const handleChange = (e) => {
@@ -130,7 +141,6 @@ const BookAppointment = () => {
     }));
   };
 
-  // Date validation: prevent weekends and holidays
   const handleDateChange = (date) => {
     setError(null);
     setFormData(prev => ({
@@ -146,17 +156,18 @@ const BookAppointment = () => {
 
     try {
       const appointmentData = {
-        doctorId: doctor._id,
-        doctorName: doctor.name,
-        specialty: doctor.specialty,
+        doctorId: bookingTarget._id,
+        doctorName: bookingTarget.name,
+        specialty: bookingTarget.specialty,
         insurance: formData.insurance,
         date: formData.date,
         time: formData.time,
         reason: formData.reason,
-        notes: formData.notes
+        notes: formData.notes,
+        clinicAddress: bookingTarget.address
       };
 
-      const response = await api.post('/api/appointments', appointmentData);
+      const response = await api.post('/appointments', appointmentData);
 
       if (response.data) {
         navigate('/appointments', { 
@@ -187,8 +198,11 @@ const BookAppointment = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Doctor Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{doctor.name}</h3>
-              <p className="text-gray-600">{doctor.specialty}</p>
+              <h3 className="text-lg font-semibold text-gray-900">{bookingTarget.name}</h3>
+              <p className="text-gray-600">{bookingTarget.specialty}</p>
+              {bookingTarget.address && (
+                <p className="text-sm text-gray-500 mt-1">{bookingTarget.address}</p>
+              )}
             </div>
             <div className="flex items-center text-gray-600">
               <FaShieldAlt className="mr-2" />
@@ -241,13 +255,7 @@ const BookAppointment = () => {
                 </div>
                 <DatePicker
                   selected={formData.date ? parseISO(formData.date) : null}
-                  onChange={date => {
-                    setError(null);
-                    setFormData(prev => ({
-                      ...prev,
-                      date: date ? format(date, 'yyyy-MM-dd') : ''
-                    }));
-                  }}
+                  onChange={handleDateChange}
                   minDate={new Date()}
                   filterDate={date => !isWeekend(date) && !isGermanHoliday(date)}
                   dateFormat="yyyy-MM-dd"

@@ -225,6 +225,10 @@ exports.uploadProfilePicture = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(503).json({ message: 'Image service not configured. Please try again later.' });
+    }
+
     const uploadResult = await cloudinary.uploader.upload_stream(
       {
         folder: 'profile-pictures',
@@ -235,7 +239,7 @@ exports.uploadProfilePicture = async (req, res) => {
       async (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', error);
-          return res.status(500).json({ message: 'Failed to upload image' });
+          return res.status(502).json({ message: 'Failed to upload image' });
         }
         const user = await User.findById(req.user.id);
         if (!user) {

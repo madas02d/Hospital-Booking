@@ -1,43 +1,34 @@
 import { useState, useEffect } from 'react'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import api from '../../utils/api'
 import { useAuth } from '../../contexts/AuthContext'
-import { auth } from '../../config/firebase'
 
 function UserAppointments() {
-  const { user } = useAuth()
+  const { currentUser } = useAuth()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const firebaseUid = auth.currentUser?.uid
-        const userId = firebaseUid || user?.id || user?._id || user?.uid
-        if (!userId) {
-          return
-        }
-        const q = query(
-          collection(db, 'appointments'),
-          where('userId', '==', userId)
-        )
-        const querySnapshot = await getDocs(q)
-        const appointmentList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        setAppointments(appointmentList)
-      } catch (error) {
-        console.error('Error fetching appointments:', error)
+        setLoading(true)
+        setError('')
+        const res = await api.get('/appointments')
+        setAppointments(res.data)
+      } catch (err) {
+        console.error('Error fetching appointments:', err)
+        setError(err.response?.data?.message || 'Failed to load appointments')
       } finally {
         setLoading(false)
       }
     }
 
-    if (user || auth.currentUser) {
+    if (currentUser) {
       fetchAppointments()
+    } else {
+      setLoading(false)
     }
-  }, [user])
+  }, [currentUser])
 
   if (loading) {
     return <div className="text-center py-4">Loading appointments...</div>
@@ -46,13 +37,16 @@ function UserAppointments() {
   return (
     <div className="mt-6">
       <h2 className="text-xl font-semibold mb-4">My Appointments</h2>
+      {error && (
+        <p className="mb-4 text-sm text-red-600">{error}</p>
+      )}
       {appointments.length === 0 ? (
         <p className="text-gray-600">No appointments scheduled yet.</p>
       ) : (
         <div className="space-y-4">
           {appointments.map(appointment => (
             <div 
-              key={appointment.id} 
+              key={appointment._id || appointment.id} 
               className="bg-white rounded-lg shadow-sm p-4 border border-gray-200"
             >
               <div className="flex justify-between items-start">

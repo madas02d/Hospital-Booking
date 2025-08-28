@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaUserMd, FaMoneyBillWave } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,7 +25,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get('/api/appointments');
+        const response = await api.get('/appointments');
         const appointments = response.data;
         
         // Calculate statistics
@@ -116,12 +116,10 @@ const Dashboard = () => {
 
   const handleCancelAppointment = async (appointmentId) => {
     try {
-      await api.patch(`/api/appointments/${appointmentId}/cancel`);
+      await api.patch(`/appointments/${appointmentId}/cancel`);
       // Refresh dashboard data after cancellation
       if (currentUser) {
-        const response = await api.get('/api/appointments');
-        const appointments = response.data;
-        // ... repeat stats logic if needed ...
+        await api.get('/appointments');
       }
     } catch (err) {
       console.error('Error cancelling appointment:', err);

@@ -32,7 +32,7 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
       // Upload to backend (Cloudinary)
       const form = new FormData()
       form.append('file', file)
-      const res = await api.post('/api/auth/profile/picture', form, {
+      const res = await api.post('/auth/profile/picture', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       const url = res.data.url
@@ -45,7 +45,15 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
       onPhotoUpdate(url)
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('Failed to upload image. Please try again.')
+      if (err?.response?.status === 401) {
+        setError('Session expired. Please log in again and retry.')
+      } else if (err?.response?.status === 503) {
+        setError('Image service is not configured. Please contact support.')
+      } else if (err?.response?.status === 502) {
+        setError('Image upload failed. Please try again later.')
+      } else {
+        setError('Failed to upload image. Please try again.')
+      }
     } finally {
       setIsUploading(false)
     }

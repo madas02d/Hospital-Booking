@@ -1,19 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { useAuth } from '../contexts/AuthContext';
-import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt, FaShieldAlt, FaHeartbeat } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaDirections, FaCalendarAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
 
 // Set your Mapbox access token here
 // Get your free token from: https://account.mapbox.com/access-tokens/
 mapboxgl.accessToken = 'pk.eyJ1IjoiZGU0ODg5MDQiLCJhIjoiY21lbDNud20wMDdhbjJqczViNHl2d24zMiJ9.RX5l_zsIqNoh4uNK-C6jOg';
 
 const FindClinics = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   
   // Refs
@@ -68,7 +65,6 @@ const FindClinics = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          console.log('User location obtained:', latitude, longitude);
           setUserLocation({ lat: latitude, lng: longitude });
           setCenter({ lat: latitude, lng: longitude });
           
@@ -81,10 +77,8 @@ const FindClinics = () => {
           // Search for clinics near user location
           searchClinicsNearby(latitude, longitude);
         },
-        (error) => {
-          console.log('Geolocation error:', error);
+        () => {
           // Use default location and search
-          console.log('Using default location for clinic search');
           searchClinicsNearby(center.lat, center.lng);
         },
         {
@@ -95,7 +89,6 @@ const FindClinics = () => {
       );
     } else {
       // Fallback: search at default location
-      console.log('Geolocation not available, using default location');
       searchClinicsNearby(center.lat, center.lng);
     }
     
@@ -132,11 +125,24 @@ const FindClinics = () => {
     }
   ];
 
+  // Distance helper (Haversine)
+  function distanceInKm(a, b) {
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLon = Math.sin(dLon / 2);
+    const c = 2 * Math.asin(Math.sqrt(sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon));
+    return R * c;
+  }
+
   // Search for clinics nearby
   const searchClinicsNearby = useCallback(async (lat, lng) => {
     try {
       setLoading(true);
-      console.log('Searching for clinics near:', lat, lng);
       
       // Use Mapbox Geocoding API to find health facilities
       const response = await fetch(
@@ -144,7 +150,6 @@ const FindClinics = () => {
       );
       
       const data = await response.json();
-      console.log('Mapbox API response:', data);
       
       if (data.features && data.features.length > 0) {
         const clinicData = data.features.map(feature => ({
@@ -152,20 +157,19 @@ const FindClinics = () => {
           name: feature.text,
           address: feature.place_name,
           coordinates: feature.center,
-          type: feature.properties.category || 'Health Facility'
+          type: feature.properties?.category || 'Health Facility'
         }));
         
-        console.log('Found clinics:', clinicData);
         setClinics(clinicData);
         
         // Add markers to map
         if (map.current) {
           // Clear existing markers first
           const existingMarkers = document.querySelectorAll('.clinic-marker');
-          existingMarkers.forEach(marker => marker.remove());
+          existingMarkers.forEach(markerNode => markerNode.remove());
           
           clinicData.forEach(clinic => {
-            const marker = new mapboxgl.Marker({ 
+            new mapboxgl.Marker({ 
               color: '#3B82F6',
               className: 'clinic-marker'
             })
@@ -184,14 +188,13 @@ const FindClinics = () => {
           });
         }
       } else {
-        console.log('No clinics found in API response, using fallback data');
         // Use fallback data if no clinics found
         setClinics(fallbackClinics);
         
         // Add fallback markers to map
         if (map.current) {
           fallbackClinics.forEach(clinic => {
-            const marker = new mapboxgl.Marker({ 
+            new mapboxgl.Marker({ 
               color: '#10B981',
               className: 'clinic-marker'
             })
@@ -210,15 +213,14 @@ const FindClinics = () => {
           });
         }
       }
-    } catch (error) {
-      console.error('Error searching clinics:', error);
-      console.log('Using fallback clinic data due to API error');
+    } catch {
+      // Use fallback clinic data due to API error
       setClinics(fallbackClinics);
       
       // Add fallback markers to map
       if (map.current) {
         fallbackClinics.forEach(clinic => {
-          const marker = new mapboxgl.Marker({ 
+          new mapboxgl.Marker({ 
             color: '#10B981',
             className: 'clinic-marker'
           })
@@ -269,8 +271,8 @@ const FindClinics = () => {
         // Search for clinics in this area
         searchClinicsNearby(newCenter.lat, newCenter.lng);
       }
-    } catch (error) {
-      console.error('Search error:', error);
+    } catch {
+      // ignore
     } finally {
       setLoading(false);
     }
@@ -286,6 +288,24 @@ const FindClinics = () => {
       }
     });
   };
+
+  const handleBookNearest = () => {
+    if (!userLocation || clinics.length === 0) return;
+    const userPoint = { lat: userLocation.lat, lng: userLocation.lng };
+    let nearest = null;
+    let minDist = Number.POSITIVE_INFINITY;
+    clinics.forEach(c => {
+      const clinicPoint = { lat: c.coordinates[1], lng: c.coordinates[0] };
+      const d = distanceInKm(userPoint, clinicPoint);
+      if (d < minDist) {
+        minDist = d;
+        nearest = c;
+      }
+    });
+    if (nearest) {
+      handleBookAppointment(nearest);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -296,8 +316,8 @@ const FindClinics = () => {
             Find Clinics Near You
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Discover healthcare facilities, clinics, and hospitals in your area. 
-            Get directions, contact information, and book appointments directly.
+            Discover healthcare facilities in your area with precise location data 
+            and book appointments at the nearest clinic.
           </p>
         </div>
         
@@ -322,11 +342,10 @@ const FindClinics = () => {
           </div>
           
           {/* Find Clinics Near Me Button */}
-          <div className="text-center">
+          <div className="text-center space-x-2">
             <button
               onClick={() => {
                 if (userLocation) {
-                  console.log('Searching clinics near user location:', userLocation);
                   searchClinicsNearby(userLocation.lat, userLocation.lng);
                   if (map.current) {
                     map.current.setCenter([userLocation.lng, userLocation.lat]);
@@ -346,8 +365,7 @@ const FindClinics = () => {
                           map.current.setZoom(14);
                         }
                       },
-                      (error) => {
-                        console.log('Geolocation error on button click:', error);
+                      () => {
                         alert('Unable to get your location. Please try searching for a specific area.');
                       }
                     );
@@ -358,6 +376,13 @@ const FindClinics = () => {
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Searching...' : 'Find Clinics Near Me'}
+            </button>
+            <button
+              onClick={handleBookNearest}
+              disabled={loading || !userLocation || clinics.length === 0}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Book Nearest Clinic
             </button>
           </div>
         </div>
@@ -401,7 +426,7 @@ const FindClinics = () => {
               <div className="text-center py-8 text-gray-500">
                 <FaMapMarkerAlt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                 <p>No clinics found in this area</p>
-                <p className="text-sm">Try searching for a different location or click "Find Clinics Near Me"</p>
+                <p className="text-sm">Try searching for a different location or click &quot;Find Clinics Near Me&quot;</p>
               </div>
             ) : (
               <div className="space-y-3">

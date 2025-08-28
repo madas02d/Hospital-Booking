@@ -1,10 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
-const { protect, handleCors, authorize } = require('../middleware/auth');
-
-// Apply CORS handler to all routes
-router.use(handleCors);
+const { protect, authorize } = require('../middleware/auth');
 
 // Helper: Check if date is weekend
 function isWeekend(date) {

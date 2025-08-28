@@ -6,7 +6,7 @@ const AuthContext = createContext(null)
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: '/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem('token')
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        const response = await api.get('/api/auth/me')
+        const response = await api.get('/auth/me')
         setCurrentUser(response.data.data)
       }
     } catch (error) {
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (firstName, lastName, email, password) => {
     try {
-      const res = await api.post('/api/auth/register', { firstName, lastName, email, password })
+      const res = await api.post('/auth/register', { firstName, lastName, email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const res = await api.post('/api/auth/login', { email, password })
+      const res = await api.post('/auth/login', { email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -72,7 +72,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post('/api/auth/logout')
+      await api.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -83,13 +83,13 @@ export function AuthProvider({ children }) {
   }
 
   const updateProfile = async (updates) => {
-    const res = await api.put('/api/auth/profile', updates)
+    const res = await api.put('/auth/profile', updates)
     setCurrentUser(res.data.user)
     return res.data.user
   }
 
   const changePassword = async (currentPassword, newPassword) => {
-    const res = await api.put('/api/auth/change-password', { currentPassword, newPassword })
+    const res = await api.put('/auth/change-password', { currentPassword, newPassword })
     return res.data
   }
 

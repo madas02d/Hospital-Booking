@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import { format } from 'date-fns';
-import { FaCalendarAlt, FaClock, FaUserMd, FaMoneyBillWave, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMoneyBillWave, FaTimes } from 'react-icons/fa';
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
@@ -24,7 +24,7 @@ const Appointments = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/api/appointments');
+      const response = await api.get('/appointments');
       setAppointments(response.data);
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -36,7 +36,7 @@ const Appointments = () => {
 
   const handleCancelAppointment = async (appointmentId) => {
     try {
-      await api.patch(`/api/appointments/${appointmentId}/cancel`);
+      await api.patch(`/appointments/${appointmentId}/cancel`);
       fetchAppointments(); // Refresh the appointments list
     } catch (err) {
       console.error('Error cancelling appointment:', err);
@@ -99,7 +99,7 @@ const Appointments = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">No appointments found</h2>
-            <p className="mt-2 text-gray-600">You haven't booked any appointments yet.</p>
+            <p className="mt-2 text-gray-600">You haven&#39;t booked any appointments yet.</p>
             <button
               onClick={() => navigate('/find-clinics')}
               className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
