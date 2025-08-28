@@ -1,148 +1,214 @@
-import { useState } from 'react'
-import Button from '../components/common/Button'
+import React, { useState } from 'react';
+import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock, FaUser, FaComments } from 'react-icons/fa';
 
-function Contact() {
+export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: ''
-  })
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // Here you would typically send the form data to your backend
-    console.log('Form submitted:', formData)
-    // Reset form
-    setFormData({ name: '', email: '', subject: '', message: '' })
-  }
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Simulate form submission
+    setTimeout(() => {
+      setLoading(false);
+      setSuccess(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    }, 1000);
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold mb-4">Contact Us</h1>
-        <p className="text-gray-600">
-          Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Contact Information */}
-        <div className="bg-blue-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-blue-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <div>
-                <h3 className="font-medium">Address</h3>
-                <p className="text-gray-600">123 Medical Center Drive, Healthcare City, HC 12345</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-blue-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <div>
-                <h3 className="font-medium">Phone</h3>
-                <p className="text-gray-600">+1 (555) 123-4567</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-blue-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <div>
-                <h3 className="font-medium">Email</h3>
-                <p className="text-gray-600">contact@docapp.com</p>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Have questions or need assistance? We're here to help you with your healthcare journey.
+          </p>
         </div>
 
-        {/* Contact Form */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Contact Information */}
+          <div className="space-y-8">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">Get in Touch</h2>
+              <p className="text-gray-600 mb-8">
+                Our team is dedicated to providing you with the best healthcare appointment experience. 
+                Reach out to us for any questions, support, or feedback.
+              </p>
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
+            {/* Contact Details */}
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <FaPhone className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Phone</h3>
+                  <p className="text-gray-600">+49 30 1234 5678</p>
+                  <p className="text-sm text-gray-500">Monday - Friday, 8:00 AM - 6:00 PM</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <FaEnvelope className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Email</h3>
+                  <p className="text-gray-600">info@doctorapp.de</p>
+                  <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <FaMapMarkerAlt className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Office</h3>
+                  <p className="text-gray-600">Berlin, Germany</p>
+                  <p className="text-sm text-gray-500">Central location for easy access</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <FaClock className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Business Hours</h3>
+                  <p className="text-gray-600">Monday - Friday: 8:00 AM - 6:00 PM</p>
+                  <p className="text-sm text-gray-500">Weekend support available for urgent matters</p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                Subject
-              </label>
-              <input
-                type="text"
-                id="subject"
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
+            {/* Additional Info */}
+            <div className="bg-blue-50 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">Need Immediate Help?</h3>
+              <p className="text-blue-800 text-sm">
+                For urgent medical matters, please contact emergency services directly or visit the nearest hospital.
+              </p>
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                Message
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                rows="4"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
-            </div>
+          {/* Contact Form */}
+          <div className="bg-white p-8 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Send us a Message</h2>
+            
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-green-800">Thank you for your message! We'll get back to you soon.</p>
+              </div>
+            )}
 
-            <Button type="submit" variant="primary" className="w-full">
-              Send Message
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaEnvelope className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your email address"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  id="subject"
+                  name="subject"
+                  required
+                  value={formData.subject}
+                  onChange={handleChange}
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="What is this about?"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                  Message *
+                </label>
+                <div className="relative">
+                  <div className="absolute top-3 left-3 flex items-start pointer-events-none">
+                    <FaComments className="h-5 w-5 text-gray-400 mt-0.5" />
+                  </div>
+                  <textarea
+                    id="message"
+                    name="message"
+                    rows={5}
+                    required
+                    value={formData.message}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Tell us how we can help you..."
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Sending...' : 'Send Message'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
-  )
-}
-
-export default Contact 
+  );
+} 

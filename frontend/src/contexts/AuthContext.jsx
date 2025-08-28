@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
         const response = await api.get('/api/auth/me')
-        setCurrentUser(response.data)
+        setCurrentUser(response.data.data)
       }
     } catch (error) {
       console.error('Auth check error:', error)
@@ -42,9 +42,9 @@ export function AuthProvider({ children }) {
     checkAuth()
   }, [])
 
-  const signup = async (name, email, password) => {
+  const signup = async (firstName, lastName, email, password) => {
     try {
-      const res = await api.post('/api/auth/register', { name, email, password })
+      const res = await api.post('/api/auth/register', { firstName, lastName, email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`

@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const userSchema = new mongoose.Schema({
-  name: {
+const UserSchema = new mongoose.Schema({
+  firstName: {
     type: String,
-    required: [true, 'Please add a name']
+    required: [true, 'Please add a first name']
+  },
+  lastName: {
+    type: String,
+    required: [true, 'Please add a last name']
   },
   email: {
     type: String,
@@ -19,8 +23,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Please add a password'],
-    minlength: 6,
-    select: false
+    minlength: [6, 'Password must be at least 6 characters']
   },
   googleId: {
     type: String,
@@ -37,13 +40,6 @@ const userSchema = new mongoose.Schema({
     enum: ['patient', 'doctor', 'admin'],
     default: 'patient'
   },
-  profilePicture: {
-    type: String,
-    default: 'https://banner2.cleanpng.com/20180603/jx/avomq8xby.webp'
-  },
-  phone: {
-    type: String
-  },
   dateOfBirth: {
     type: Date
   },
@@ -52,15 +48,16 @@ const userSchema = new mongoose.Schema({
     enum: ['male', 'female', 'other']
   },
   bloodGroup: {
-    type: String,
-    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+    type: String
+  },
+  phone: {
+    type: String
   },
   address: {
     street: String,
     city: String,
     state: String,
-    zipCode: String,
-    country: String
+    zipCode: String
   },
   emergencyContact: {
     name: String,
@@ -70,8 +67,8 @@ const userSchema = new mongoose.Schema({
   medicalHistory: [{
     condition: String,
     diagnosis: String,
-    treatment: String,
-    date: Date
+    date: Date,
+    notes: String
   }],
   allergies: [{
     name: String,
@@ -86,16 +83,14 @@ const userSchema = new mongoose.Schema({
     endDate: Date,
     prescribedBy: String
   }],
-  appointments: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Appointment'
-  }]
-}, {
-  timestamps: true
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     return next();
   }
@@ -103,16 +98,16 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
-
 // Sign JWT and return
-userSchema.methods.getSignedJwtToken = function() {
+UserSchema.methods.getSignedJwtToken = function() {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
 
-module.exports = mongoose.model('User', userSchema); 
+// Match user entered password to hashed password in database
+UserSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model('User', UserSchema); 

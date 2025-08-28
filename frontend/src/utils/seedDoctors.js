@@ -1,5 +1,5 @@
-import { collection, addDoc, getDocs, query } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { collection, addDoc, getDocs, query } from 'firebase/firestore.js'
+import { db } from '../config/firebase.js'
 
 const doctorsData = [
   {

@@ -5,20 +5,36 @@ import ProfilePicture from '../components/profile/ProfilePicture'
 import UserAppointments from '../components/profile/UserAppointments'
 
 function Profile() {
-  const { user, currentUser, updateProfile, changePassword, logout } = useAuth()
-  const resolvedUser = currentUser || user
+  const { currentUser, updateProfile, logout } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    name: resolvedUser?.name || '',
-    email: resolvedUser?.email || '',
-    phone: resolvedUser?.phone || '',
-    address: typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street || '') : (resolvedUser?.address || ''),
-    dateOfBirth: resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : '',
-    gender: resolvedUser?.gender || '',
-    bloodGroup: resolvedUser?.bloodGroup || ''
+    firstName: currentUser?.firstName || '',
+    lastName: currentUser?.lastName || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    address: currentUser?.address || '',
+    dateOfBirth: currentUser?.dateOfBirth || '',
+    gender: currentUser?.gender || '',
+    bloodGroup: currentUser?.bloodGroup || ''
   })
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
+
+  // Update form data when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setFormData({
+        firstName: currentUser.firstName || '',
+        lastName: currentUser.lastName || '',
+        email: currentUser.email || '',
+        phone: currentUser.phone || '',
+        address: currentUser.address || '',
+        dateOfBirth: currentUser.dateOfBirth || '',
+        gender: currentUser.gender || '',
+        bloodGroup: currentUser.bloodGroup || ''
+      })
+    }
+  }, [currentUser])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -96,7 +112,7 @@ function Profile() {
 
         <div className="mb-8">
           <ProfilePicture 
-            photoURL={resolvedUser?.profilePicture || resolvedUser?.photoURL}
+            photoURL={currentUser?.photoURL}
             onPhotoUpdate={handlePhotoUpdate}
           />
         </div>
@@ -105,18 +121,35 @@ function Profile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
+                First Name
               </label>
               {isEditing ? (
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{resolvedUser?.name}</p>
+                <p className="text-gray-900">{currentUser?.firstName}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="text-gray-900">{currentUser?.lastName}</p>
               )}
             </div>
 
@@ -124,7 +157,17 @@ function Profile() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
-              <p className="text-gray-900">{resolvedUser?.email}</p>
+              {isEditing ? (
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="text-gray-900">{currentUser?.email}</p>
+              )}
             </div>
 
             <div>
@@ -140,7 +183,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{resolvedUser?.phone}</p>
+                <p className="text-gray-900">{currentUser?.phone}</p>
               )}
             </div>
 
@@ -157,7 +200,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : 'Not set'}</p>
+                <p className="text-gray-900">{currentUser?.dateOfBirth || 'Not set'}</p>
               )}
             </div>
 
@@ -178,7 +221,7 @@ function Profile() {
                   <option value="other">Other</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{resolvedUser?.gender || 'Not set'}</p>
+                <p className="text-gray-900">{currentUser?.gender || 'Not set'}</p>
               )}
             </div>
 
@@ -204,7 +247,7 @@ function Profile() {
                   <option value="O-">O-</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{resolvedUser?.bloodGroup || 'Not set'}</p>
+                <p className="text-gray-900">{currentUser?.bloodGroup || 'Not set'}</p>
               )}
             </div>
           </div>
@@ -222,7 +265,7 @@ function Profile() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             ) : (
-              <p className="text-gray-900">{(typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street) : resolvedUser?.address) || 'Not set'}</p>
+              <p className="text-gray-900">{currentUser?.address || 'Not set'}</p>
             )}
           </div>
 
@@ -234,13 +277,14 @@ function Profile() {
                 onClick={() => {
                   setIsEditing(false)
                   setFormData({
-                    name: resolvedUser?.name || '',
-                    email: resolvedUser?.email || '',
-                    phone: resolvedUser?.phone || '',
-                    address: typeof resolvedUser?.address === 'object' ? (resolvedUser?.address?.street || '') : (resolvedUser?.address || ''),
-                    dateOfBirth: resolvedUser?.dateOfBirth ? String(resolvedUser.dateOfBirth).substring(0,10) : '',
-                    gender: resolvedUser?.gender || '',
-                    bloodGroup: resolvedUser?.bloodGroup || ''
+                    firstName: currentUser?.firstName || '',
+                    lastName: currentUser?.lastName || '',
+                    email: currentUser?.email || '',
+                    phone: currentUser?.phone || '',
+                    address: currentUser?.address || '',
+                    dateOfBirth: currentUser?.dateOfBirth || '',
+                    gender: currentUser?.gender || '',
+                    bloodGroup: currentUser?.bloodGroup || ''
                   })
                 }}
               >
