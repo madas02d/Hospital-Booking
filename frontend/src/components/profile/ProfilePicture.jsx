@@ -1,13 +1,21 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { updateProfile } from 'firebase/auth'
-import { auth } from '../../config/firebase'
 import api from '../../utils/api'
 
 function ProfilePicture({ photoURL, onPhotoUpdate }) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState('')
+  const [currentPhotoURL, setCurrentPhotoURL] = useState(photoURL)
   const fileInputRef = useRef(null)
+
+  // Update local state when photoURL prop changes
+  useEffect(() => {
+    setCurrentPhotoURL(photoURL)
+  }, [photoURL])
+
+  // Debug logging
+  console.log('ProfilePicture component - photoURL prop:', photoURL)
+  console.log('ProfilePicture component - currentPhotoURL state:', currentPhotoURL)
 
   const handleFileSelect = async (event) => {
     const file = event.target.files[0]
@@ -29,28 +37,62 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
       setIsUploading(true)
       setError('')
 
+      console.log('Starting file upload:', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      })
+
       // Upload to backend (Cloudinary)
       const form = new FormData()
       form.append('file', file)
+      
       const res = await api.post('/auth/profile/picture', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      const url = res.data.url
-
-      // Update Firebase Auth profile if available (optional)
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { photoURL: url })
+      
+      console.log('Upload response:', res.data)
+      
+      if (res.data.success && res.data.url) {
+        // Update local state immediately to show the new image
+        setCurrentPhotoURL(res.data.url);
+        
+        // Call the callback to update the profile with the new URL and user data
+        if (res.data.user) {
+          // If we have updated user data, pass it to the callback
+          onPhotoUpdate(res.data.url, res.data.user)
+        } else {
+          // Fallback: just pass the URL
+          onPhotoUpdate(res.data.url)
+        }
+        
+        // Clear any previous errors
+        setError('')
+        
+        console.log('Profile picture updated successfully:', res.data.url)
+      } else {
+        throw new Error('Upload response missing URL')
       }
-
-      onPhotoUpdate(url)
     } catch (err) {
       console.error('Error uploading image:', err)
+      
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      
       if (err?.response?.status === 401) {
         setError('Session expired. Please log in again and retry.')
       } else if (err?.response?.status === 503) {
         setError('Image service is not configured. Please contact support.')
       } else if (err?.response?.status === 502) {
         setError('Image upload failed. Please try again later.')
+      } else if (err?.response?.status === 400) {
+        setError(err.response.data.message || 'Invalid file. Please try again.')
+      } else if (err?.response?.status === 413) {
+        setError('File too large. Please select a smaller image.')
+      } else if (err?.response?.status === 415) {
+        setError('Unsupported file type. Please select an image file.')
       } else {
         setError('Failed to upload image. Please try again.')
       }
@@ -63,11 +105,16 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
     <div className="flex flex-col items-center">
       <div className="relative">
         <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200">
-          {photoURL ? (
+          {currentPhotoURL ? (
             <img
-              src={photoURL}
+              src={currentPhotoURL}
               alt="Profile"
               className="w-full h-full object-cover"
+              onLoad={() => console.log('Profile image loaded successfully:', currentPhotoURL)}
+              onError={(e) => {
+                console.error('Profile image failed to load:', currentPhotoURL, e);
+                console.log('Image error event:', e.target);
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400">

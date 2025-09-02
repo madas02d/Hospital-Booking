@@ -53,6 +53,9 @@ const UserSchema = new mongoose.Schema({
   phone: {
     type: String
   },
+  profilePicture: {
+    type: String
+  },
   address: {
     street: String,
     city: String,

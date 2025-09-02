@@ -23,8 +23,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid, clear it and let the app handle redirect
+    // Only handle 401 errors for non-file upload requests
+    if (error.response?.status === 401 && !error.config?.headers?.['Content-Type']?.includes('multipart/form-data')) {
+      // Token expired or invalid, clear it
       localStorage.removeItem('token');
       // Do not hard redirect here to avoid aborting in-flight requests (e.g., file uploads)
     }

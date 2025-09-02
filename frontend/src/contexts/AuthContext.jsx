@@ -20,19 +20,29 @@ export function AuthProvider({ children }) {
   // Function to check and restore authentication
   const checkAuth = async () => {
     try {
+      console.log('AuthContext: Starting auth check...')
       const token = localStorage.getItem('token')
+      console.log('AuthContext: Token found:', !!token)
+      
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        console.log('AuthContext: Making API call to /auth/me...')
         const response = await api.get('/auth/me')
-        setCurrentUser(response.data.data)
+        // Handle both response structures
+        const userData = response.data.data || response.data
+        console.log('AuthContext: User data received:', userData)
+        setCurrentUser(userData)
+      } else {
+        console.log('AuthContext: No token found, setting loading to false')
       }
     } catch (error) {
-      console.error('Auth check error:', error)
+      console.error('AuthContext: Auth check error:', error)
       // If token is invalid, clear it
       localStorage.removeItem('token')
       delete api.defaults.headers.common['Authorization']
       setCurrentUser(null)
     } finally {
+      console.log('AuthContext: Setting loading to false')
       setLoading(false)
     }
   }
@@ -48,7 +58,9 @@ export function AuthProvider({ children }) {
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setCurrentUser(res.data.user)
+      // Handle both response structures
+      const userData = res.data.user || res.data.data
+      setCurrentUser(userData)
       return res.data
     } catch (error) {
       console.error('Signup error:', error.response?.data || error.message)
@@ -62,7 +74,10 @@ export function AuthProvider({ children }) {
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setCurrentUser(res.data.user)
+      // Handle both response structures
+      const userData = res.data.user || res.data.data
+      console.log('Login - user data received:', userData)
+      setCurrentUser(userData)
       return res.data
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message)
@@ -83,9 +98,25 @@ export function AuthProvider({ children }) {
   }
 
   const updateProfile = async (updates) => {
-    const res = await api.put('/auth/profile', updates)
-    setCurrentUser(res.data.user)
-    return res.data.user
+    try {
+      console.log('AuthContext: updateProfile called with:', updates)
+      
+      const res = await api.put('/auth/profile', updates)
+      
+      if (res.data.success) {
+        // Update the current user state with the new data
+        const updatedUser = { ...currentUser, ...res.data.user }
+        console.log('AuthContext: Updating user state with:', updatedUser)
+        setCurrentUser(updatedUser)
+        return updatedUser
+      } else {
+        throw new Error('Profile update failed')
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+      // Don't clear the user on profile update errors
+      throw error
+    }
   }
 
   const changePassword = async (currentPassword, newPassword) => {
