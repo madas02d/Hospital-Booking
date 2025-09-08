@@ -1,27 +1,32 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/common/Button'
 import ProfilePicture from '../components/profile/ProfilePicture'
-import { updateProfile as updateFirebaseProfile } from 'firebase/auth'
-import { auth } from '../config/firebase'
 import UserAppointments from '../components/profile/UserAppointments'
-import api from '../utils/api'
-import { Link } from 'react-router-dom'
 
 function Profile() {
-  const { currentUser, updateProfile, logout } = useAuth()
+  
+  const { currentUser, updateProfile, changePassword, loading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    firstName: currentUser?.firstName || '',
-    lastName: currentUser?.lastName || '',
-    email: currentUser?.email || '',
-    phone: currentUser?.phone || '',
-    address: currentUser?.address || '',
-    dateOfBirth: currentUser?.dateOfBirth || '',
-    gender: currentUser?.gender || '',
-    bloodGroup: currentUser?.bloodGroup || ''
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    },
+    dateOfBirth: '',
+    gender: '',
+    bloodGroup: ''
   })
+  const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
+
+  // Debug logging
 
   // Update form data when currentUser changes
   useEffect(() => {
@@ -31,7 +36,12 @@ function Profile() {
         lastName: currentUser.lastName || '',
         email: currentUser.email || '',
         phone: currentUser.phone || '',
-        address: currentUser.address || '',
+        address: {
+          street: currentUser.address?.street || '',
+          city: currentUser.address?.city || '',
+          state: currentUser.address?.state || '',
+          zipCode: currentUser.address?.zipCode || ''
+        },
         dateOfBirth: currentUser.dateOfBirth || '',
         gender: currentUser.gender || '',
         bloodGroup: currentUser.bloodGroup || ''
@@ -39,34 +49,118 @@ function Profile() {
     }
   }, [currentUser])
 
+  // Show loading state while authentication is being checked
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if no user is authenticated
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Authentication Error</h1>
+            <p className="text-gray-600">Please log in to view your profile.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      // In a real app, you would make an API call here
-      await api.put('/api/auth/profile', formData)
-      updateProfile(formData)
+      await updateProfile(formData)
       setMessage({ type: 'success', text: 'Profile updated successfully' })
       setIsEditing(false)
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to update profile' })
+      setMessage({ type: 'error', text: err?.message || 'Failed to update profile' })
     }
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    
+    // Handle nested address fields
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.')
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
-  const handlePhotoUpdate = async (photoURL) => {
+  const handlePhotoUpdate = async (photoURL, updatedUserData) => {
     try {
-      await updateFirebaseProfile(auth.currentUser, { photoURL })
-      updateProfile({ photoURL })
+      
+      if (updatedUserData) {
+        // If we have updated user data from the upload, update the AuthContext directly
+        // This ensures the entire user object is synchronized
+        await updateProfile({ profilePicture: photoURL })
+        
+        // The updateProfile function should already update the AuthContext state
+        // But we can also manually update the local state if needed
+        setFormData(prev => ({
+          ...prev,
+          profilePicture: photoURL
+        }))
+      } else {
+        // Fallback: Update the profile with the new picture URL
+        await updateProfile({ profilePicture: photoURL })
+      }
+      
       setMessage({ type: 'success', text: 'Profile picture updated successfully' })
+      
+      // Clear the success message after 3 seconds
+      setTimeout(() => {
+        setMessage({ type: '', text: '' })
+      }, 3000)
+      
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to update profile picture' })
+      console.error('Error updating profile picture:', err)
+      // Don't show error message if it's just a profile update failure
+      // The ProfilePicture component will handle upload errors
+      if (err?.response?.status !== 401) {
+        setMessage({ type: 'error', text: 'Failed to update profile picture. Please try again.' })
+        
+        // Clear the error message after 5 seconds
+        setTimeout(() => {
+          setMessage({ type: '', text: '' })
+        }, 5000)
+      }
+    }
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    if (!passwords.newPassword || passwords.newPassword !== passwords.confirmNewPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' })
+      return
+    }
+    try {
+      await changePassword(passwords.currentPassword, passwords.newPassword)
+      setPasswords({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
+      setMessage({ type: 'success', text: 'Password changed successfully' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to change password' })
     }
   }
 
@@ -84,12 +178,12 @@ function Profile() {
                 Edit Profile
               </Button>
             )}
-            <Button 
+            {/* <Button 
               variant="secondary" 
               onClick={logout}
             >
               Logout
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -103,7 +197,7 @@ function Profile() {
 
         <div className="mb-8">
           <ProfilePicture 
-            photoURL={currentUser?.photoURL}
+            photoURL={currentUser?.profilePicture || currentUser?.photoURL}
             onPhotoUpdate={handlePhotoUpdate}
           />
         </div>
@@ -123,7 +217,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{currentUser?.firstName}</p>
+                <p className="text-gray-900">{currentUser?.firstName || 'Not set'}</p>
               )}
             </div>
 
@@ -140,7 +234,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{currentUser?.lastName}</p>
+                <p className="text-gray-900">{currentUser?.lastName || 'Not set'}</p>
               )}
             </div>
 
@@ -157,7 +251,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{currentUser?.email}</p>
+                <p className="text-gray-900">{currentUser?.email || 'Not set'}</p>
               )}
             </div>
 
@@ -174,7 +268,7 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{currentUser?.phone}</p>
+                <p className="text-gray-900">{currentUser?.phone || 'Not set'}</p>
               )}
             </div>
 
@@ -191,7 +285,12 @@ function Profile() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900">{currentUser?.dateOfBirth || 'Not set'}</p>
+                <p className="text-gray-900">
+                  {currentUser?.dateOfBirth 
+                    ? new Date(currentUser.dateOfBirth).toLocaleDateString() 
+                    : 'Not set'
+                  }
+                </p>
               )}
             </div>
 
@@ -248,15 +347,55 @@ function Profile() {
               Address
             </label>
             {isEditing ? (
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Street</label>
+                  <input
+                    type="text"
+                    name="address.street"
+                    value={formData.address?.street || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">City</label>
+                  <input
+                    type="text"
+                    name="address.city"
+                    value={formData.address?.city || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">State</label>
+                  <input
+                    type="text"
+                    name="address.state"
+                    value={formData.address?.state || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1">ZIP Code</label>
+                  <input
+                    type="text"
+                    name="address.zipCode"
+                    value={formData.address?.zipCode || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
             ) : (
-              <p className="text-gray-900">{currentUser?.address || 'Not set'}</p>
+              <p className="text-gray-900">
+                {currentUser?.address?.street || currentUser?.address?.city || currentUser?.address?.state || currentUser?.address?.zipCode 
+                  ? `${currentUser.address.street || ''} ${currentUser.address.city || ''} ${currentUser.address.state || ''} ${currentUser.address.zipCode || ''}`.trim() || 'Not set'
+                  : 'Not set'
+                }
+              </p>
             )}
           </div>
 
@@ -272,7 +411,12 @@ function Profile() {
                     lastName: currentUser?.lastName || '',
                     email: currentUser?.email || '',
                     phone: currentUser?.phone || '',
-                    address: currentUser?.address || '',
+                    address: {
+                      street: currentUser?.address?.street || '',
+                      city: currentUser?.address?.city || '',
+                      state: currentUser?.address?.state || '',
+                      zipCode: currentUser?.address?.zipCode || ''
+                    },
                     dateOfBirth: currentUser?.dateOfBirth || '',
                     gender: currentUser?.gender || '',
                     bloodGroup: currentUser?.bloodGroup || ''
@@ -287,6 +431,42 @@ function Profile() {
             </div>
           )}
         </form>
+
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+          <form onSubmit={handlePasswordChange} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+              <input
+                type="password"
+                value={passwords.currentPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, currentPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+              <input
+                type="password"
+                value={passwords.newPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, newPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwords.confirmNewPassword}
+                onChange={(e) => setPasswords(p => ({ ...p, confirmNewPassword: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="md:col-span-3 flex justify-end">
+              <Button type="submit" variant="secondary">Update Password</Button>
+            </div>
+          </form>
+        </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200">
           <UserAppointments />

@@ -7,7 +7,7 @@ const appointmentSchema = new mongoose.Schema({
     required: true
   },
   doctorId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed, // Allow both ObjectId and String
     ref: 'Doctor',
     required: true
   },
@@ -19,9 +19,14 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  insurance: {
+    type: String,
+    required: false
+  },
   consultationFee: {
     type: Number,
-    required: true
+    required: false,
+    default: 0
   },
   date: {
     type: Date,
@@ -38,18 +43,33 @@ const appointmentSchema = new mongoose.Schema({
   notes: {
     type: String
   },
+  clinicAddress: {
+    type: String
+  },
+  clinicType: {
+    type: String
+  },
+  clinicPhone: {
+    type: String
+  },
+  clinicWebsite: {
+    type: String
+  },
   status: {
     type: String,
-    enum: ['scheduled', 'cancelled', 'completed'],
-    default: 'scheduled'
+    enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+    default: 'pending'
   },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  confirmedAt: {
+    type: Date
   },
   cancelledAt: {
     type: Date
   }
 });
 
-module.exports = mongoose.model('Appointment', appointmentSchema); 
+module.exports = mongoose.model('Appointment', appointmentSchema);

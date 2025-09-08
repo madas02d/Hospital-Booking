@@ -1,0 +1,34 @@
+--- FreeMapEmbed.jsx.orig
++++ FreeMapEmbed.jsx
+@@ -245,7 +245,12 @@
+   const handleSearch = () => {
+-    if (currentLocation) {
+-      generateFreeMapUrl(currentLocation, searchQuery || 'medical facilities');
+-      findNearbyFacilities(currentLocation.lat, currentLocation.lng);
+-    }
++    if (currentLocation) {
++      setLoading(true);
++      generateFreeMapUrl(currentLocation, searchQuery || 'medical facilities');
++      findNearbyFacilities(currentLocation.lat, currentLocation.lng);
++    } else {
++      setError('Please get your location first or allow location access to search for facilities.');
++    }
+   };
+ 
+   const handleFilterChange = (filter) => {
+@@ -90,6 +95,15 @@
+       if (selectedFilter !== 'all') {
+         filtered = filtered.filter(facility => facility.type.toLowerCase() === selectedFilter.toLowerCase());
+       }
+       
++      // If there's a search query, filter by name or specialties
++      if (searchQuery.trim()) {
++        const query = searchQuery.toLowerCase();
++        filtered = filtered.filter(facility => 
++          facility.name.toLowerCase().includes(query) ||
++          facility.specialties.some(specialty => specialty.toLowerCase().includes(query)) ||
++          facility.type.toLowerCase().includes(query)
++        );
++      }
++      
+       filtered.sort((a, b) => a.distance - b.distance);

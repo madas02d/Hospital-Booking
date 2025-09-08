@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 // Helper: Check if date is weekend
 function isWeekend(date) {
@@ -74,11 +74,11 @@ router.post('/', protect, async (req, res) => {
       return res.status(400).json({ message: 'Appointments must be between 07:00 and 18:00.' });
     }
 
-    // Check for 30 min gap for the same doctor
+    // Check for 30 min gap for the same doctor (block against pending and confirmed)
     const existingAppointments = await Appointment.find({
       doctorId,
       date: appointmentDate,
-      status: 'scheduled'
+      status: { $in: ['pending', 'confirmed'] }
     });
     const requestedTime = timeToMinutes(time);
     for (const appt of existingAppointments) {
@@ -93,7 +93,7 @@ router.post('/', protect, async (req, res) => {
       doctorId,
       date: appointmentDate,
       time,
-      status: 'scheduled'
+      status: { $in: ['pending', 'confirmed'] }
     });
     if (existing) {
       return res.status(409).json({ message: 'This time slot is already booked for this doctor.' });
@@ -108,10 +108,31 @@ router.post('/', protect, async (req, res) => {
       time,
       reason,
       notes
+      // status defaults to 'pending'
     });
 
     await appointment.save();
     res.status(201).json(appointment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Confirm an appointment (doctor or admin)
+router.patch('/:id/confirm', protect, authorize('doctor', 'admin'), async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+    if (appointment.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending appointments can be confirmed' });
+    }
+    appointment.status = 'confirmed';
+    appointment.confirmedAt = new Date();
+    await appointment.save();
+    res.json(appointment);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

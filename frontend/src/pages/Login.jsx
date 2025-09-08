@@ -17,9 +17,7 @@ function Login() {
     setLoading(true)
     
     try {
-      console.log('Attempting to login with:', { email })
       const user = await login(email, password)
-      console.log('Login successful:', user)
       navigate('/dashboard')
     } catch (error) {
       console.error('Login error:', error)
