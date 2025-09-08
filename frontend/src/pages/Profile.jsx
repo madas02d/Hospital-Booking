@@ -5,7 +5,6 @@ import ProfilePicture from '../components/profile/ProfilePicture'
 import UserAppointments from '../components/profile/UserAppointments'
 
 function Profile() {
-  console.log('Profile component - FUNCTION START')
   
   const { currentUser, updateProfile, changePassword, loading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
@@ -28,10 +27,6 @@ function Profile() {
   const [message, setMessage] = useState({ type: '', text: '' })
 
   // Debug logging
-  console.log('Profile component - currentUser:', currentUser)
-  console.log('Profile component - profilePicture:', currentUser?.profilePicture)
-  console.log('Profile component - loading:', loading)
-  console.log('Profile component - rendering...')
 
   // Update form data when currentUser changes
   useEffect(() => {
@@ -115,7 +110,6 @@ function Profile() {
 
   const handlePhotoUpdate = async (photoURL, updatedUserData) => {
     try {
-      console.log('Profile: handlePhotoUpdate called with:', { photoURL, updatedUserData })
       
       if (updatedUserData) {
         // If we have updated user data from the upload, update the AuthContext directly

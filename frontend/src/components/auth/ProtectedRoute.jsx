@@ -5,8 +5,6 @@ import PropTypes from 'prop-types';
 export default function ProtectedRoute({ children }) {
   const { currentUser, loading } = useAuth();
   
-  console.log('ProtectedRoute - currentUser:', currentUser);
-  console.log('ProtectedRoute - loading:', loading);
 
   if (loading) {
     return (
@@ -17,11 +15,9 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!currentUser) {
-    console.log('ProtectedRoute - redirecting to login');
     return <Navigate to="/login" />;
   }
 
-  console.log('ProtectedRoute - rendering children');
   return children;
 }
 

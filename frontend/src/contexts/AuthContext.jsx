@@ -20,20 +20,15 @@ export function AuthProvider({ children }) {
   // Function to check and restore authentication
   const checkAuth = async () => {
     try {
-      console.log('AuthContext: Starting auth check...')
       const token = localStorage.getItem('token')
-      console.log('AuthContext: Token found:', !!token)
       
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        console.log('AuthContext: Making API call to /auth/me...')
         const response = await api.get('/auth/me')
         // Handle both response structures
         const userData = response.data.data || response.data
-        console.log('AuthContext: User data received:', userData)
         setCurrentUser(userData)
       } else {
-        console.log('AuthContext: No token found, setting loading to false')
       }
     } catch (error) {
       console.error('AuthContext: Auth check error:', error)
@@ -42,7 +37,6 @@ export function AuthProvider({ children }) {
       delete api.defaults.headers.common['Authorization']
       setCurrentUser(null)
     } finally {
-      console.log('AuthContext: Setting loading to false')
       setLoading(false)
     }
   }
@@ -76,7 +70,6 @@ export function AuthProvider({ children }) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
       // Handle both response structures
       const userData = res.data.user || res.data.data
-      console.log('Login - user data received:', userData)
       setCurrentUser(userData)
       return res.data
     } catch (error) {
@@ -99,14 +92,12 @@ export function AuthProvider({ children }) {
 
   const updateProfile = async (updates) => {
     try {
-      console.log('AuthContext: updateProfile called with:', updates)
       
       const res = await api.put('/auth/profile', updates)
       
       if (res.data.success) {
         // Update the current user state with the new data
         const updatedUser = { ...currentUser, ...res.data.user }
-        console.log('AuthContext: Updating user state with:', updatedUser)
         setCurrentUser(updatedUser)
         return updatedUser
       } else {

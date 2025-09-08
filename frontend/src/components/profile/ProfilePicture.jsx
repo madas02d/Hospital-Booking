@@ -14,8 +14,6 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
   }, [photoURL])
 
   // Debug logging
-  console.log('ProfilePicture component - photoURL prop:', photoURL)
-  console.log('ProfilePicture component - currentPhotoURL state:', currentPhotoURL)
 
   const handleFileSelect = async (event) => {
     const file = event.target.files[0]
@@ -36,12 +34,11 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
     try {
       setIsUploading(true)
       setError('')
-
-      console.log('Starting file upload:', {
+      const fileInfo = {
         name: file.name,
         type: file.type,
         size: file.size
-      })
+      }
 
       // Upload to backend (Cloudinary)
       const form = new FormData()
@@ -51,7 +48,6 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       
-      console.log('Upload response:', res.data)
       
       if (res.data.success && res.data.url) {
         // Update local state immediately to show the new image
@@ -69,7 +65,6 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
         // Clear any previous errors
         setError('')
         
-        console.log('Profile picture updated successfully:', res.data.url)
       } else {
         throw new Error('Upload response missing URL')
       }
@@ -110,10 +105,8 @@ function ProfilePicture({ photoURL, onPhotoUpdate }) {
               src={currentPhotoURL}
               alt="Profile"
               className="w-full h-full object-cover"
-              onLoad={() => console.log('Profile image loaded successfully:', currentPhotoURL)}
               onError={(e) => {
                 console.error('Profile image failed to load:', currentPhotoURL, e);
-                console.log('Image error event:', e.target);
               }}
             />
           ) : (
